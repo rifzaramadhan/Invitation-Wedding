@@ -27,6 +27,7 @@ publicRouter.get('/:slug', async (c) => {
             musicUrl: true,
             coverImage: true,
             giftSettings: true,
+            theme: true,
         },
         with: {
             events: {
@@ -74,6 +75,7 @@ publicRouter.get('/:slug/guest/:guestSlug', async (c) => {
             musicUrl: true,
             coverImage: true,
             giftSettings: true,
+            theme: true,
         },
         with: {
             events: {

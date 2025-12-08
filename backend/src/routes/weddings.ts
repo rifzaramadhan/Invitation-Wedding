@@ -38,6 +38,7 @@ const weddingSchema = z.object({
         })).optional(),
     }).optional(),
     isActive: z.boolean().optional(),
+    theme: z.enum(['elegant', 'rustic', 'minimalist', 'royal']).optional(),
 });
 
 // List user's weddings

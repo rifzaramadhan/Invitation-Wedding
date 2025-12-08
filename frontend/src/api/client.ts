@@ -111,6 +111,7 @@ export interface WeddingInput {
         }>;
     };
     isActive?: boolean;
+    theme?: string;
 }
 
 export interface GuestInput {
@@ -165,6 +166,7 @@ export interface Wedding {
             accountName: string;
         }>;
     };
+    theme: string;
     isActive: boolean;
     createdAt: string;
     events?: Event[];

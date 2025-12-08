@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence } from 'framer-motion';
 import { publicApi, Wedding, Guest, Wish } from '../../api/client';
+import { ThemeProvider } from '../../components/ThemeProvider';
 
 import OpeningCover from '../../components/public/OpeningCover';
 import Hero from '../../components/public/Hero';
@@ -61,7 +62,7 @@ export default function InvitationPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
+            <div className="min-h-screen flex items-center justify-center theme-gradient">
                 <div className="text-center">
                     <div className="w-16 h-16 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4" />
                     <p className="text-secondary-600">Loading invitation...</p>
@@ -72,7 +73,7 @@ export default function InvitationPage() {
 
     if (error || !weddingData?.wedding) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
+            <div className="min-h-screen flex items-center justify-center theme-gradient">
                 <div className="text-center">
                     <p className="text-xl text-secondary-700 mb-2">Invitation not found</p>
                     <p className="text-secondary-500">The wedding invitation you're looking for doesn't exist.</p>
@@ -84,45 +85,48 @@ export default function InvitationPage() {
     const { wedding, guest } = weddingData;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50">
-            <AnimatePresence mode="wait">
-                {!isOpened && (
-                    <OpeningCover
-                        key="cover"
-                        wedding={wedding}
-                        guestName={guest?.name}
-                        onOpen={handleOpen}
-                    />
-                )}
-            </AnimatePresence>
-
-            {isOpened && (
-                <>
-                    <FloatingElements />
-                    <MusicPlayer
-                        musicUrl={wedding.musicUrl}
-                        isPlaying={isPlaying}
-                        onToggle={() => setIsPlaying(!isPlaying)}
-                    />
-
-                    <main>
-                        <Hero wedding={wedding} guestName={guest?.name} />
-                        <CoupleSection wedding={wedding} />
-                        <EventTimeline events={wedding.events || []} />
-                        <WishesSection
-                            slug={slug!}
-                            wishes={wishesData || []}
+        <ThemeProvider themeId={wedding.theme}>
+            <div className="min-h-screen theme-gradient theme-font-body">
+                <AnimatePresence mode="wait">
+                    {!isOpened && (
+                        <OpeningCover
+                            key="cover"
+                            wedding={wedding}
                             guestName={guest?.name}
-                            guestSlug={guest?.slug}
-                            maxAttendees={guest?.maxAttendees}
+                            onOpen={handleOpen}
                         />
-                        {wedding.giftSettings && (
-                            <GiftSection giftSettings={wedding.giftSettings} />
-                        )}
-                        <Footer groomName={wedding.groomName} brideName={wedding.brideName} />
-                    </main>
-                </>
-            )}
-        </div>
+                    )}
+                </AnimatePresence>
+
+                {isOpened && (
+                    <>
+                        <FloatingElements />
+                        <MusicPlayer
+                            musicUrl={wedding.musicUrl}
+                            isPlaying={isPlaying}
+                            onToggle={() => setIsPlaying(!isPlaying)}
+                        />
+
+                        <main>
+                            <Hero wedding={wedding} guestName={guest?.name} />
+                            <CoupleSection wedding={wedding} />
+                            <EventTimeline events={wedding.events || []} />
+                            <WishesSection
+                                slug={slug!}
+                                wishes={wishesData || []}
+                                guestName={guest?.name}
+                                guestSlug={guest?.slug}
+                                maxAttendees={guest?.maxAttendees}
+                            />
+                            {wedding.giftSettings && (
+                                <GiftSection giftSettings={wedding.giftSettings} />
+                            )}
+                            <Footer groomName={wedding.groomName} brideName={wedding.brideName} />
+                        </main>
+                    </>
+                )}
+            </div>
+        </ThemeProvider>
     );
 }
+

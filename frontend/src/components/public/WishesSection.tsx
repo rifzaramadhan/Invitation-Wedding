@@ -42,12 +42,16 @@ export default function WishesSection({
             setIsSubmitted(true);
             queryClient.invalidateQueries({ queryKey: ['wishes', slug] });
 
-            // Trigger confetti
+            // Trigger confetti with theme colors
+            const rootStyle = getComputedStyle(document.documentElement);
+            const primaryColor = rootStyle.getPropertyValue('--theme-primary').trim();
+            const accentColor = rootStyle.getPropertyValue('--theme-accent').trim();
+
             confetti({
                 particleCount: 100,
                 spread: 70,
                 origin: { y: 0.6 },
-                colors: ['#e06459', '#cca01f', '#c9b7a6'],
+                colors: [primaryColor || '#e06459', accentColor || '#cca01f', '#c9b7a6'],
             });
         },
     });
@@ -67,7 +71,10 @@ export default function WishesSection({
     };
 
     return (
-        <section className="py-20 px-6 bg-gradient-to-b from-white to-secondary-50">
+        <section
+            className="py-20 px-6"
+            style={{ background: `linear-gradient(to bottom, var(--theme-background), var(--theme-secondary-light))` }}
+        >
             <div className="max-w-4xl mx-auto">
                 {/* Section title */}
                 <motion.div
@@ -76,10 +83,13 @@ export default function WishesSection({
                     viewport={{ once: true }}
                     className="text-center mb-12"
                 >
-                    <p className="text-primary-600 text-sm uppercase tracking-[0.3em] mb-2">
+                    <p
+                        className="text-sm uppercase tracking-[0.3em] mb-2"
+                        style={{ color: 'var(--theme-primary)' }}
+                    >
                         RSVP & Wishes
                     </p>
-                    <h2 className="section-title">Send Your Wishes</h2>
+                    <h2 className="text-3xl md:text-4xl theme-font-heading theme-text">Send Your Wishes</h2>
                 </motion.div>
 
                 <div className="grid lg:grid-cols-2 gap-8">
@@ -95,15 +105,15 @@ export default function WishesSection({
                                     key="success"
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    className="card text-center py-12"
+                                    className="theme-card rounded-2xl p-6 shadow-lg text-center py-12"
                                 >
                                     <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                         <Check className="w-10 h-10 text-green-600" />
                                     </div>
-                                    <h3 className="text-xl font-medium text-secondary-800 mb-2">
+                                    <h3 className="text-xl font-medium theme-text mb-2">
                                         Thank You!
                                     </h3>
-                                    <p className="text-secondary-600">
+                                    <p className="theme-text-light">
                                         Your wish has been sent. We appreciate your kind words!
                                     </p>
                                 </motion.div>
@@ -114,10 +124,10 @@ export default function WishesSection({
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
                                     onSubmit={handleSubmit}
-                                    className="card space-y-4"
+                                    className="theme-card rounded-2xl p-6 shadow-lg space-y-4"
                                 >
                                     <div>
-                                        <label className="block text-sm font-medium text-secondary-700 mb-1">
+                                        <label className="block text-sm font-medium theme-text mb-1">
                                             Your Name
                                         </label>
                                         <input
@@ -132,7 +142,7 @@ export default function WishesSection({
 
                                     {/* Attendance */}
                                     <div>
-                                        <label className="block text-sm font-medium text-secondary-700 mb-2">
+                                        <label className="block text-sm font-medium theme-text mb-2">
                                             Will you attend?
                                         </label>
                                         <div className="flex gap-3">
@@ -140,8 +150,8 @@ export default function WishesSection({
                                                 type="button"
                                                 onClick={() => setFormData({ ...formData, isAttending: true })}
                                                 className={`flex-1 py-3 rounded-xl border-2 transition-all ${formData.isAttending === true
-                                                        ? 'border-green-500 bg-green-50 text-green-700'
-                                                        : 'border-secondary-200 hover:border-secondary-300'
+                                                    ? 'border-green-500 bg-green-50 text-green-700'
+                                                    : 'border-secondary-200 hover:border-secondary-300'
                                                     }`}
                                             >
                                                 <Check className="w-5 h-5 mx-auto mb-1" />
@@ -151,8 +161,8 @@ export default function WishesSection({
                                                 type="button"
                                                 onClick={() => setFormData({ ...formData, isAttending: false })}
                                                 className={`flex-1 py-3 rounded-xl border-2 transition-all ${formData.isAttending === false
-                                                        ? 'border-red-500 bg-red-50 text-red-700'
-                                                        : 'border-secondary-200 hover:border-secondary-300'
+                                                    ? 'border-red-500 bg-red-50 text-red-700'
+                                                    : 'border-secondary-200 hover:border-secondary-300'
                                                     }`}
                                             >
                                                 <X className="w-5 h-5 mx-auto mb-1" />
@@ -167,7 +177,7 @@ export default function WishesSection({
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: 'auto' }}
                                         >
-                                            <label className="block text-sm font-medium text-secondary-700 mb-1">
+                                            <label className="block text-sm font-medium theme-text mb-1">
                                                 Number of attendees (max {maxAttendees})
                                             </label>
                                             <select
@@ -187,7 +197,7 @@ export default function WishesSection({
                                     )}
 
                                     <div>
-                                        <label className="block text-sm font-medium text-secondary-700 mb-1">
+                                        <label className="block text-sm font-medium theme-text mb-1">
                                             Your Message
                                         </label>
                                         <textarea
@@ -202,7 +212,7 @@ export default function WishesSection({
                                     <button
                                         type="submit"
                                         disabled={submitMutation.isPending}
-                                        className="btn-primary w-full flex items-center justify-center gap-2"
+                                        className="theme-btn w-full flex items-center justify-center gap-2 px-6 py-3 rounded-full font-medium"
                                     >
                                         {submitMutation.isPending ? (
                                             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -229,14 +239,14 @@ export default function WishesSection({
                         initial={{ opacity: 0, x: 30 }}
                         whileInView={{ opacity: 1, x: 0 }}
                         viewport={{ once: true }}
-                        className="card max-h-[500px] overflow-y-auto"
+                        className="theme-card rounded-2xl p-6 shadow-lg max-h-[500px] overflow-y-auto"
                     >
-                        <h3 className="font-medium text-secondary-700 mb-4 sticky top-0 bg-white/80 backdrop-blur-sm py-2">
+                        <h3 className="font-medium theme-text mb-4 sticky top-0 backdrop-blur-sm py-2" style={{ backgroundColor: 'var(--theme-background)' }}>
                             Wishes from Guests ({wishes.length})
                         </h3>
 
                         {wishes.length === 0 ? (
-                            <div className="text-center py-8 text-secondary-500">
+                            <div className="text-center py-8 theme-text-light">
                                 <p>No wishes yet. Be the first to send your wishes!</p>
                             </div>
                         ) : (
@@ -247,30 +257,34 @@ export default function WishesSection({
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.1 }}
-                                        className="border-b border-secondary-100 pb-4 last:border-0"
+                                        className="border-b pb-4 last:border-0"
+                                        style={{ borderColor: 'var(--theme-secondary-light)' }}
                                     >
                                         <div className="flex items-start gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-100 to-gold-100 flex items-center justify-center flex-shrink-0">
-                                                <User className="w-5 h-5 text-primary-600" />
+                                            <div
+                                                className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                                                style={{ background: `linear-gradient(to bottom right, var(--theme-primary-light), var(--theme-accent-light))` }}
+                                            >
+                                                <User className="w-5 h-5" style={{ color: 'var(--theme-primary)' }} />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <span className="font-medium text-secondary-800">{wish.name}</span>
+                                                    <span className="font-medium theme-text">{wish.name}</span>
                                                     {wish.isAttending !== null && (
                                                         <span
                                                             className={`text-xs px-2 py-0.5 rounded-full ${wish.isAttending
-                                                                    ? 'bg-green-100 text-green-700'
-                                                                    : 'bg-red-100 text-red-700'
+                                                                ? 'bg-green-100 text-green-700'
+                                                                : 'bg-red-100 text-red-700'
                                                                 }`}
                                                         >
                                                             {wish.isAttending ? 'Attending' : 'Not attending'}
                                                         </span>
                                                     )}
                                                 </div>
-                                                <p className="text-secondary-600 text-sm whitespace-pre-line">
+                                                <p className="theme-text-light text-sm whitespace-pre-line">
                                                     {wish.message}
                                                 </p>
-                                                <p className="text-xs text-secondary-400 mt-1">
+                                                <p className="text-xs theme-text-light opacity-60 mt-1">
                                                     {formatDate(wish.createdAt)}
                                                 </p>
                                             </div>
@@ -285,3 +299,4 @@ export default function WishesSection({
         </section>
     );
 }
+

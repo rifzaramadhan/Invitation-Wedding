@@ -18,7 +18,7 @@ export default function OpeningCover({ wedding, guestName, onOpen }: OpeningCove
             style={{
                 backgroundImage: wedding.coverImage
                     ? `url(${wedding.coverImage})`
-                    : 'linear-gradient(135deg, #fdf4f3 0%, #efebe5 100%)',
+                    : `linear-gradient(135deg, var(--theme-primary-light) 0%, var(--theme-secondary-light) 100%)`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
             }}
@@ -59,7 +59,7 @@ export default function OpeningCover({ wedding, guestName, onOpen }: OpeningCove
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.9 }}
-                    className="font-script text-5xl md:text-7xl text-white mb-6 text-shadow-lg"
+                    className="theme-font-script text-5xl md:text-7xl text-white mb-6 text-shadow-lg"
                 >
                     {wedding.groomName} & {wedding.brideName}
                 </motion.h1>
@@ -85,7 +85,11 @@ export default function OpeningCover({ wedding, guestName, onOpen }: OpeningCove
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={onOpen}
-                    className="px-8 py-4 bg-white/90 hover:bg-white text-secondary-800 rounded-full font-medium shadow-xl transition-all duration-300"
+                    className="px-8 py-4 rounded-full font-medium shadow-xl transition-all duration-300"
+                    style={{
+                        backgroundColor: 'var(--theme-primary)',
+                        color: 'white',
+                    }}
                 >
                     Open Invitation
                 </motion.button>
@@ -109,3 +113,4 @@ export default function OpeningCover({ wedding, guestName, onOpen }: OpeningCove
         </motion.div>
     );
 }
+

@@ -9,7 +9,10 @@ export default function CoupleSection({ wedding }: CoupleSectionProps) {
     return (
         <section className="py-20 px-6 relative overflow-hidden">
             {/* Background */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-secondary-50/50 to-transparent" />
+            <div
+                className="absolute inset-0"
+                style={{ background: `linear-gradient(to bottom, transparent, var(--theme-secondary-light), transparent)` }}
+            />
 
             <div className="max-w-5xl mx-auto relative z-10">
                 {/* Section title */}
@@ -19,10 +22,13 @@ export default function CoupleSection({ wedding }: CoupleSectionProps) {
                     viewport={{ once: true }}
                     className="text-center mb-16"
                 >
-                    <p className="text-primary-600 text-sm uppercase tracking-[0.3em] mb-2">
+                    <p
+                        className="text-sm uppercase tracking-[0.3em] mb-2"
+                        style={{ color: 'var(--theme-primary)' }}
+                    >
                         Bride & Groom
                     </p>
-                    <h2 className="section-title">We're Getting Married</h2>
+                    <h2 className="text-3xl md:text-4xl theme-font-heading theme-text">We're Getting Married</h2>
                 </motion.div>
 
                 {/* Couple cards */}
@@ -44,20 +50,26 @@ export default function CoupleSection({ wedding }: CoupleSectionProps) {
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
-                                    <div className="w-full h-full bg-gradient-to-br from-secondary-100 to-secondary-200 flex items-center justify-center">
+                                    <div
+                                        className="w-full h-full flex items-center justify-center"
+                                        style={{ background: `linear-gradient(to bottom right, var(--theme-secondary-light), var(--theme-primary-light))` }}
+                                    >
                                         <span className="text-6xl">🤵</span>
                                     </div>
                                 )}
                             </div>
                             {/* Decorative ring */}
-                            <div className="absolute -inset-2 rounded-full border-2 border-dashed border-gold-300 animate-spin" style={{ animationDuration: '20s' }} />
+                            <div
+                                className="absolute -inset-2 rounded-full border-2 border-dashed animate-spin"
+                                style={{ borderColor: 'var(--theme-accent)', animationDuration: '20s' }}
+                            />
                         </div>
 
-                        <h3 className="font-script text-4xl text-secondary-800 mb-2">
+                        <h3 className="theme-font-script text-4xl theme-text mb-2">
                             {wedding.groomFullName || wedding.groomName}
                         </h3>
                         {wedding.groomParents && (
-                            <p className="text-secondary-500 text-sm">
+                            <p className="text-sm theme-text-light">
                                 Son of {wedding.groomParents}
                             </p>
                         )}
@@ -80,19 +92,25 @@ export default function CoupleSection({ wedding }: CoupleSectionProps) {
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
-                                    <div className="w-full h-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
+                                    <div
+                                        className="w-full h-full flex items-center justify-center"
+                                        style={{ background: `linear-gradient(to bottom right, var(--theme-primary-light), var(--theme-accent-light))` }}
+                                    >
                                         <span className="text-6xl">👰</span>
                                     </div>
                                 )}
                             </div>
-                            <div className="absolute -inset-2 rounded-full border-2 border-dashed border-gold-300 animate-spin" style={{ animationDuration: '20s', animationDirection: 'reverse' }} />
+                            <div
+                                className="absolute -inset-2 rounded-full border-2 border-dashed animate-spin"
+                                style={{ borderColor: 'var(--theme-accent)', animationDuration: '20s', animationDirection: 'reverse' }}
+                            />
                         </div>
 
-                        <h3 className="font-script text-4xl text-secondary-800 mb-2">
+                        <h3 className="theme-font-script text-4xl theme-text mb-2">
                             {wedding.brideFullName || wedding.brideName}
                         </h3>
                         {wedding.brideParents && (
-                            <p className="text-secondary-500 text-sm">
+                            <p className="text-sm theme-text-light">
                                 Daughter of {wedding.brideParents}
                             </p>
                         )}
@@ -111,8 +129,8 @@ export default function CoupleSection({ wedding }: CoupleSectionProps) {
                         <div className="inline-block mb-4">
                             <span className="text-5xl">💕</span>
                         </div>
-                        <h3 className="font-serif text-2xl text-secondary-700 mb-4">Our Love Story</h3>
-                        <p className="text-secondary-600 leading-relaxed whitespace-pre-line">
+                        <h3 className="text-2xl theme-font-heading theme-text mb-4">Our Love Story</h3>
+                        <p className="theme-text-light leading-relaxed whitespace-pre-line">
                             {wedding.story}
                         </p>
                     </motion.div>
@@ -121,3 +139,4 @@ export default function CoupleSection({ wedding }: CoupleSectionProps) {
         </section>
     );
 }
+

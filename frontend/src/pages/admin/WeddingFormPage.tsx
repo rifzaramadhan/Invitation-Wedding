@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Save, Trash2, Plus, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Save, Trash2, Plus, X, Palette, CheckCircle, AlertCircle } from 'lucide-react';
 import { weddingsApi, eventsApi, Wedding, WeddingInput, EventInput } from '../../api/client';
+import { getThemeList } from '../../themes/themes';
 
 export default function WeddingFormPage() {
     const { id } = useParams<{ id: string }>();
@@ -31,9 +32,19 @@ export default function WeddingFormPage() {
             eWallets: [],
         },
         isActive: true,
+        theme: 'elegant',
     });
 
     const [events, setEvents] = useState<(EventInput & { id?: string })[]>([]);
+    const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+    // Auto-hide notification after 4 seconds
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(null), 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
 
     // Fetch existing wedding data
     const { data: weddingData, isLoading } = useQuery({
@@ -63,6 +74,7 @@ export default function WeddingFormPage() {
                 coverImage: weddingData.coverImage || '',
                 giftSettings: weddingData.giftSettings || { bankAccounts: [], eWallets: [] },
                 isActive: weddingData.isActive,
+                theme: weddingData.theme || 'elegant',
             });
             if (weddingData.events) {
                 setEvents(
@@ -95,9 +107,19 @@ export default function WeddingFormPage() {
         },
         onSuccess: (weddingId) => {
             queryClient.invalidateQueries({ queryKey: ['weddings'] });
+            setNotification({
+                type: 'success',
+                message: isEditing ? 'Wedding updated successfully!' : 'Wedding created successfully!'
+            });
             if (!isEditing) {
                 navigate(`/admin/wedding/${weddingId}`);
             }
+        },
+        onError: (error: Error) => {
+            setNotification({
+                type: 'error',
+                message: error.message || 'Failed to save wedding. Please try again.'
+            });
         },
     });
 
@@ -183,6 +205,34 @@ export default function WeddingFormPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-secondary-50 to-white">
+            {/* Notification Toast */}
+            <AnimatePresence>
+                {notification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -50, x: '-50%' }}
+                        animate={{ opacity: 1, y: 0, x: '-50%' }}
+                        exit={{ opacity: 0, y: -50, x: '-50%' }}
+                        className={`fixed top-4 left-1/2 z-50 flex items-center gap-3 px-6 py-4 rounded-xl shadow-lg ${notification.type === 'success'
+                                ? 'bg-green-50 border border-green-200 text-green-800'
+                                : 'bg-red-50 border border-red-200 text-red-800'
+                            }`}
+                    >
+                        {notification.type === 'success' ? (
+                            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        ) : (
+                            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                        )}
+                        <span className="font-medium">{notification.message}</span>
+                        <button
+                            onClick={() => setNotification(null)}
+                            className="ml-2 p-1 hover:bg-black/5 rounded-full transition-colors"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Header */}
             <header className="bg-white border-b border-secondary-100 sticky top-0 z-40">
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -233,8 +283,8 @@ export default function WeddingFormPage() {
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab
-                                    ? 'bg-primary-600 text-white'
-                                    : 'bg-white text-secondary-600 hover:bg-secondary-50'
+                                ? 'bg-primary-600 text-white'
+                                : 'bg-white text-secondary-600 hover:bg-secondary-50'
                                 }`}
                         >
                             {tab === 'details' && 'Wedding Details'}
@@ -288,6 +338,49 @@ export default function WeddingFormPage() {
                                             className="input"
                                             required
                                         />
+                                    </div>
+                                </div>
+
+                                {/* Theme selector */}
+                                <div className="mt-6 pt-6 border-t border-secondary-100">
+                                    <label className="block text-sm font-medium text-secondary-700 mb-3 flex items-center gap-2">
+                                        <Palette className="w-4 h-4" />
+                                        Invitation Theme
+                                    </label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        {getThemeList().map((theme) => (
+                                            <button
+                                                key={theme.id}
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, theme: theme.id })}
+                                                className={`relative p-3 rounded-xl border-2 transition-all ${formData.theme === theme.id
+                                                    ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200'
+                                                    : 'border-secondary-200 hover:border-secondary-300 bg-white'
+                                                    }`}
+                                            >
+                                                {/* Color preview */}
+                                                <div className="flex gap-1 mb-2 justify-center">
+                                                    <div
+                                                        className="w-5 h-5 rounded-full shadow-sm"
+                                                        style={{ backgroundColor: theme.colors.primary }}
+                                                    />
+                                                    <div
+                                                        className="w-5 h-5 rounded-full shadow-sm"
+                                                        style={{ backgroundColor: theme.colors.secondary }}
+                                                    />
+                                                    <div
+                                                        className="w-5 h-5 rounded-full shadow-sm"
+                                                        style={{ backgroundColor: theme.colors.accent }}
+                                                    />
+                                                </div>
+                                                <p className="text-sm font-medium text-secondary-800">
+                                                    {theme.name}
+                                                </p>
+                                                <p className="text-xs text-secondary-500 mt-0.5">
+                                                    {theme.description}
+                                                </p>
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
                             </div>

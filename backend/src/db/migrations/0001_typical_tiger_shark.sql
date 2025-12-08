@@ -1,0 +1,1 @@
+ALTER TABLE "weddings" ADD COLUMN "theme" text DEFAULT 'elegant' NOT NULL;

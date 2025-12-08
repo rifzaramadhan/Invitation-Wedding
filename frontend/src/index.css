@@ -2,11 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import theme fonts */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Great+Vibes&family=Lora:wght@400;500;600;700&family=Open+Sans:wght@300;400;500;600;700&family=Dancing+Script:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&family=Alex+Brush&family=Cinzel:wght@400;500;600;700&family=Raleway:wght@300;400;500;600;700&family=Pinyon+Script&display=swap');
+
+/* Theme CSS custom properties - defaults to elegant theme */
+:root {
+  --theme-primary: #cc4539;
+  --theme-primary-light: #fdf4f3;
+  --theme-primary-dark: #8e3129;
+  --theme-secondary: #7c5a4e;
+  --theme-secondary-light: #f8f6f4;
+  --theme-accent: #cca01f;
+  --theme-accent-light: #fbf9eb;
+  --theme-background: #ffffff;
+  --theme-background-alt: #fdf4f3;
+  --theme-text: #543f39;
+  --theme-text-light: #956f5d;
+
+  --font-heading: 'Playfair Display';
+  --font-body: 'Outfit';
+  --font-script: 'Great Vibes';
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
   }
-  
+
   body {
     @apply font-sans antialiased;
   }
@@ -14,47 +36,116 @@
 
 @layer components {
   .btn-primary {
-    @apply px-6 py-3 bg-primary-600 text-white rounded-full font-medium 
-           transition-all duration-300 hover:bg-primary-700 hover:shadow-lg 
-           hover:shadow-primary-600/25 active:scale-95;
+    @apply px-6 py-3 bg-primary-600 text-white rounded-full font-medium transition-all duration-300 hover:bg-primary-700 hover:shadow-lg hover:shadow-primary-600/25 active:scale-95;
   }
-  
+
   .btn-secondary {
-    @apply px-6 py-3 bg-secondary-100 text-secondary-800 rounded-full font-medium 
-           transition-all duration-300 hover:bg-secondary-200 active:scale-95;
+    @apply px-6 py-3 bg-secondary-100 text-secondary-800 rounded-full font-medium transition-all duration-300 hover:bg-secondary-200 active:scale-95;
   }
-  
+
   .btn-gold {
-    @apply px-6 py-3 bg-gradient-to-r from-gold-500 to-gold-600 text-white 
-           rounded-full font-medium transition-all duration-300 
-           hover:shadow-lg hover:shadow-gold-500/25 active:scale-95;
+    @apply px-6 py-3 bg-gradient-to-r from-gold-500 to-gold-600 text-white rounded-full font-medium transition-all duration-300 hover:shadow-lg hover:shadow-gold-500/25 active:scale-95;
   }
-  
+
   .card {
     @apply bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6;
   }
-  
+
   .input {
-    @apply w-full px-4 py-3 rounded-xl border border-secondary-200 
-           focus:border-primary-400 focus:ring-2 focus:ring-primary-100 
-           outline-none transition-all duration-200;
+    @apply w-full px-4 py-3 rounded-xl border border-secondary-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all duration-200;
   }
-  
+
   .section-title {
     @apply font-serif text-3xl md:text-4xl text-secondary-800;
   }
-  
+
   .gradient-text {
     @apply bg-gradient-to-r from-primary-600 to-gold-500 bg-clip-text text-transparent;
+  }
+
+  /* Theme-aware styles for invitation pages */
+  .theme-bg {
+    background-color: var(--theme-background);
+  }
+
+  .theme-bg-alt {
+    background-color: var(--theme-background-alt);
+  }
+
+  .theme-text {
+    color: var(--theme-text);
+  }
+
+  .theme-text-light {
+    color: var(--theme-text-light);
+  }
+
+  .theme-primary {
+    color: var(--theme-primary);
+  }
+
+  .theme-primary-bg {
+    background-color: var(--theme-primary);
+  }
+
+  .theme-accent {
+    color: var(--theme-accent);
+  }
+
+  .theme-accent-bg {
+    background-color: var(--theme-accent);
+  }
+
+  .theme-border {
+    border-color: var(--theme-primary);
+  }
+
+  .theme-gradient {
+    background: linear-gradient(135deg, var(--theme-primary-light), var(--theme-background), var(--theme-accent-light));
+  }
+
+  .theme-gradient-text {
+    background: linear-gradient(to right, var(--theme-primary), var(--theme-accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .theme-font-heading {
+    font-family: var(--font-heading), Georgia, serif;
+  }
+
+  .theme-font-body {
+    font-family: var(--font-body), system-ui, sans-serif;
+  }
+
+  .theme-font-script {
+    font-family: var(--font-script), cursive;
+  }
+
+  .theme-btn {
+    background-color: var(--theme-primary);
+    color: white;
+    transition: all 0.3s ease;
+  }
+
+  .theme-btn:hover {
+    background-color: var(--theme-primary-dark);
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--theme-primary) 30%, transparent);
+  }
+
+  .theme-card {
+    background-color: color-mix(in srgb, var(--theme-background) 90%, var(--theme-primary-light) 10%);
+    border: 1px solid color-mix(in srgb, var(--theme-primary) 15%, transparent);
   }
 }
 
 @layer utilities {
   .text-shadow {
-    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
-  
+
   .text-shadow-lg {
-    text-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   }
 }

@@ -51,10 +51,16 @@ export default function Hero({ wedding, guestName }: HeroProps) {
 
     return (
         <section className="min-h-screen flex flex-col items-center justify-center px-6 py-20 relative overflow-hidden">
-            {/* Background decorations */}
+            {/* Background decorations - using theme colors */}
             <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute top-20 left-10 w-72 h-72 bg-primary-200/30 rounded-full blur-3xl" />
-                <div className="absolute bottom-20 right-10 w-96 h-96 bg-gold-200/30 rounded-full blur-3xl" />
+                <div
+                    className="absolute top-20 left-10 w-72 h-72 rounded-full blur-3xl opacity-30"
+                    style={{ backgroundColor: 'var(--theme-primary-light)' }}
+                />
+                <div
+                    className="absolute bottom-20 right-10 w-96 h-96 rounded-full blur-3xl opacity-30"
+                    style={{ backgroundColor: 'var(--theme-accent-light)' }}
+                />
             </div>
 
             <motion.div
@@ -72,9 +78,9 @@ export default function Hero({ wedding, guestName }: HeroProps) {
                         transition={{ delay: 0.3 }}
                         className="mb-8"
                     >
-                        <p className="text-secondary-500 mb-1">Dear</p>
-                        <p className="text-xl font-medium text-secondary-700">{guestName}</p>
-                        <p className="text-secondary-500 mt-2">You are cordially invited to our wedding</p>
+                        <p className="theme-text-light mb-1">Dear</p>
+                        <p className="text-xl font-medium theme-text">{guestName}</p>
+                        <p className="theme-text-light mt-2">You are cordially invited to our wedding</p>
                     </motion.div>
                 )}
 
@@ -85,14 +91,26 @@ export default function Hero({ wedding, guestName }: HeroProps) {
                     viewport={{ once: true }}
                     transition={{ delay: 0.2, duration: 0.6 }}
                 >
-                    <p className="text-sm uppercase tracking-[0.3em] text-primary-600 mb-4">
+                    <p
+                        className="text-sm uppercase tracking-[0.3em] mb-4"
+                        style={{ color: 'var(--theme-primary)' }}
+                    >
                         The Wedding Of
                     </p>
-                    <h1 className="font-script text-6xl md:text-8xl gradient-text mb-4">
+                    <h1
+                        className="theme-font-script text-6xl md:text-8xl mb-4 theme-gradient-text"
+                    >
                         {wedding.groomName}
                     </h1>
-                    <p className="text-4xl text-gold-500 font-script mb-4">&</p>
-                    <h1 className="font-script text-6xl md:text-8xl gradient-text">
+                    <p
+                        className="text-4xl theme-font-script mb-4"
+                        style={{ color: 'var(--theme-accent)' }}
+                    >
+                        &
+                    </p>
+                    <h1
+                        className="theme-font-script text-6xl md:text-8xl theme-gradient-text"
+                    >
                         {wedding.brideName}
                     </h1>
                 </motion.div>
@@ -103,7 +121,7 @@ export default function Hero({ wedding, guestName }: HeroProps) {
                     whileInView={{ opacity: 1 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.5 }}
-                    className="text-lg text-secondary-600 mt-8 font-serif"
+                    className="text-lg mt-8 theme-font-heading theme-text-light"
                 >
                     {formattedDate}
                 </motion.p>
@@ -124,12 +142,12 @@ export default function Hero({ wedding, guestName }: HeroProps) {
                     ].map((item) => (
                         <div
                             key={item.label}
-                            className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-lg"
+                            className="theme-card backdrop-blur-sm rounded-2xl p-4 shadow-lg"
                         >
-                            <div className="text-3xl md:text-4xl font-bold gradient-text">
+                            <div className="text-3xl md:text-4xl font-bold theme-gradient-text">
                                 {String(item.value).padStart(2, '0')}
                             </div>
-                            <div className="text-xs text-secondary-500 uppercase tracking-wider mt-1">
+                            <div className="text-xs theme-text-light uppercase tracking-wider mt-1">
                                 {item.label}
                             </div>
                         </div>
@@ -147,7 +165,7 @@ export default function Hero({ wedding, guestName }: HeroProps) {
                 <motion.div
                     animate={{ y: [0, 10, 0] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
-                    className="text-secondary-400"
+                    className="theme-text-light"
                 >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
@@ -157,3 +175,4 @@ export default function Hero({ wedding, guestName }: HeroProps) {
         </section>
     );
 }
+

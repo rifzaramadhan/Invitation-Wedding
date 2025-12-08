@@ -40,6 +40,7 @@ export const weddings = pgTable('weddings', {
         }>;
     }>(),
     isActive: boolean('is_active').default(true).notNull(),
+    theme: text('theme').default('elegant').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
