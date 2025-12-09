@@ -11,20 +11,26 @@ const weddingsRouter = new Hono();
 weddingsRouter.use('*', authMiddleware);
 
 // Validation schemas
+// Custom validator that accepts both full URLs and relative paths (for R2 proxy URLs)
+const urlOrPath = z.string().refine(
+    (val) => !val || val.startsWith('/api/') || val.startsWith('http://') || val.startsWith('https://'),
+    { message: 'Must be a valid URL or relative path' }
+);
+
 const weddingSchema = z.object({
     slug: z.string().min(3).regex(/^[a-z0-9-]+$/),
     groomName: z.string().min(2),
     brideName: z.string().min(2),
     groomFullName: z.string().optional(),
     brideFullName: z.string().optional(),
-    groomPhoto: z.string().url().optional(),
-    bridePhoto: z.string().url().optional(),
+    groomPhoto: urlOrPath.optional().or(z.literal('')),
+    bridePhoto: urlOrPath.optional().or(z.literal('')),
     groomParents: z.string().optional(),
     brideParents: z.string().optional(),
     story: z.string().optional(),
     weddingDate: z.string(),
-    musicUrl: z.string().url().optional(),
-    coverImage: z.string().url().optional(),
+    musicUrl: urlOrPath.optional().or(z.literal('')),
+    coverImage: urlOrPath.optional().or(z.literal('')),
     giftSettings: z.object({
         bankAccounts: z.array(z.object({
             bankName: z.string(),

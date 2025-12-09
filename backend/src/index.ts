@@ -10,6 +10,7 @@ import guestsRouter from './routes/guests.js';
 import eventsRouter from './routes/events.js';
 import wishesRouter from './routes/wishes.js';
 import publicRouter from './routes/public.js';
+import uploadsRouter from './routes/uploads.js';
 
 const app = new Hono();
 
@@ -30,6 +31,7 @@ app.route('/api', guestsRouter);
 app.route('/api', eventsRouter);
 app.route('/api', wishesRouter);
 app.route('/api/public', publicRouter);
+app.route('/api/uploads', uploadsRouter);
 
 // 404 handler
 app.notFound((c) => c.json({ error: 'Not found' }, 404));

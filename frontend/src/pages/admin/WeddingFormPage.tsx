@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Save, Trash2, Plus, X, Palette, CheckCircle, AlertCircle } from 'lucide-react';
 import { weddingsApi, eventsApi, Wedding, WeddingInput, EventInput } from '../../api/client';
 import { getThemeList } from '../../themes/themes';
+import FileUpload from '../../components/admin/FileUpload';
 
 export default function WeddingFormPage() {
     const { id } = useParams<{ id: string }>();
@@ -213,8 +214,8 @@ export default function WeddingFormPage() {
                         animate={{ opacity: 1, y: 0, x: '-50%' }}
                         exit={{ opacity: 0, y: -50, x: '-50%' }}
                         className={`fixed top-4 left-1/2 z-50 flex items-center gap-3 px-6 py-4 rounded-xl shadow-lg ${notification.type === 'success'
-                                ? 'bg-green-50 border border-green-200 text-green-800'
-                                : 'bg-red-50 border border-red-200 text-red-800'
+                            ? 'bg-green-50 border border-green-200 text-green-800'
+                            : 'bg-red-50 border border-red-200 text-red-800'
                             }`}
                     >
                         {notification.type === 'success' ? (
@@ -427,15 +428,11 @@ export default function WeddingFormPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-secondary-700 mb-1">
-                                            Photo URL
-                                        </label>
-                                        <input
-                                            type="url"
+                                        <FileUpload
+                                            type="image"
+                                            label="Groom Photo"
                                             value={formData.groomPhoto}
-                                            onChange={(e) => setFormData({ ...formData, groomPhoto: e.target.value })}
-                                            className="input"
-                                            placeholder="https://..."
+                                            onChange={(url) => setFormData({ ...formData, groomPhoto: url })}
                                         />
                                     </div>
                                 </div>
@@ -483,15 +480,11 @@ export default function WeddingFormPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-secondary-700 mb-1">
-                                            Photo URL
-                                        </label>
-                                        <input
-                                            type="url"
+                                        <FileUpload
+                                            type="image"
+                                            label="Bride Photo"
                                             value={formData.bridePhoto}
-                                            onChange={(e) => setFormData({ ...formData, bridePhoto: e.target.value })}
-                                            className="input"
-                                            placeholder="https://..."
+                                            onChange={(url) => setFormData({ ...formData, bridePhoto: url })}
                                         />
                                     </div>
                                 </div>
@@ -513,30 +506,18 @@ export default function WeddingFormPage() {
                                         />
                                     </div>
                                     <div className="grid sm:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-secondary-700 mb-1">
-                                                Cover Image URL
-                                            </label>
-                                            <input
-                                                type="url"
-                                                value={formData.coverImage}
-                                                onChange={(e) => setFormData({ ...formData, coverImage: e.target.value })}
-                                                className="input"
-                                                placeholder="https://..."
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-secondary-700 mb-1">
-                                                Background Music URL
-                                            </label>
-                                            <input
-                                                type="url"
-                                                value={formData.musicUrl}
-                                                onChange={(e) => setFormData({ ...formData, musicUrl: e.target.value })}
-                                                className="input"
-                                                placeholder="https://...mp3"
-                                            />
-                                        </div>
+                                        <FileUpload
+                                            type="image"
+                                            label="Cover Image"
+                                            value={formData.coverImage}
+                                            onChange={(url) => setFormData({ ...formData, coverImage: url })}
+                                        />
+                                        <FileUpload
+                                            type="audio"
+                                            label="Background Music"
+                                            value={formData.musicUrl}
+                                            onChange={(url) => setFormData({ ...formData, musicUrl: url })}
+                                        />
                                     </div>
                                 </div>
                             </div>

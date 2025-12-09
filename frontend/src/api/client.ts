@@ -83,6 +83,43 @@ export const publicApi = {
     submitWish: (slug: string, data: WishInput) => api.post(`/public/${slug}/wishes`, data),
 };
 
+// Uploads API (file uploads to R2)
+export const uploadsApi = {
+    getPresignedUrl: (filename: string, contentType: string, type: 'image' | 'audio') =>
+        api.post<{
+            uploadUrl: string;
+            key: string;
+            publicUrl: string;
+            maxSize: number;
+        }>('/uploads/presigned-url', { filename, contentType, type }),
+    uploadToR2: async (url: string, file: File, onProgress?: (percent: number) => void) => {
+        return new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', url);
+            xhr.setRequestHeader('Content-Type', file.type);
+
+            xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable && onProgress) {
+                    const percent = Math.round((event.loaded / event.total) * 100);
+                    onProgress(percent);
+                }
+            };
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve();
+                } else {
+                    reject(new Error(`Upload failed with status ${xhr.status}`));
+                }
+            };
+
+            xhr.onerror = () => reject(new Error('Upload failed'));
+            xhr.send(file);
+        });
+    },
+    deleteFile: (key: string) => api.delete(`/uploads/file/${encodeURIComponent(key)}`),
+};
+
 // Types
 export interface WeddingInput {
     slug: string;
