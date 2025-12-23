@@ -27,11 +27,13 @@ app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOStri
 // API Routes
 app.route('/api/auth', authRouter);
 app.route('/api/weddings', weddingsRouter);
+// Mount uploads before guests/events to prevent their wildcard auth middleware
+// from intercepting public file access requests
+app.route('/api/uploads', uploadsRouter);
 app.route('/api', guestsRouter);
 app.route('/api', eventsRouter);
 app.route('/api', wishesRouter);
 app.route('/api/public', publicRouter);
-app.route('/api/uploads', uploadsRouter);
 
 // 404 handler
 app.notFound((c) => c.json({ error: 'Not found' }, 404));

@@ -1,0 +1,34 @@
+# Stage 1: Build the application
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including devDependencies for build)
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build the application (output goes to /app/dist)
+RUN npm run build
+
+# Stage 2: Lightweight image to hold and serve static files
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy built static files from builder stage
+COPY --from=builder /app/dist ./dist
+
+# Create a simple script to copy files to the shared volume
+RUN echo '#!/bin/sh' > /copy-dist.sh && \
+    echo 'cp -r /app/dist/* /usr/share/nginx/html/' >> /copy-dist.sh && \
+    echo 'echo "Static files copied to nginx volume"' >> /copy-dist.sh && \
+    echo 'tail -f /dev/null' >> /copy-dist.sh && \
+    chmod +x /copy-dist.sh
+
+CMD ["/copy-dist.sh"]
+
