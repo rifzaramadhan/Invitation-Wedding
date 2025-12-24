@@ -7,7 +7,14 @@ echo "Waiting for database to be ready..."
 sleep 2
 
 echo "Running database migrations..."
-npm run db:migrate
+
+# Use production migration script if NODE_ENV is production
+if [ "$NODE_ENV" = "production" ]; then
+  npm run db:migrate:prod
+else
+  npm run db:migrate
+fi
 
 echo "Starting application..."
 exec "$@"
+

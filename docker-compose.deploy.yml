@@ -1,7 +1,6 @@
 # Docker Compose for On-Premises Deployment
 # Uses pre-built images from Docker Hub
 # Place this file on your deployment server
-version: "3.8"
 
 services:
   postgres:
