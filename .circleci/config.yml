@@ -1,5 +1,5 @@
 # CircleCI Configuration for Wedding Invitation System
-# See: https://circleci.com/docs/reference/configuration-reference
+# Full CI/CD: Build → Test → Push to Docker Hub → Deploy to On-Prem
 version: 2.1
 
 # Orbs for common functionality
@@ -25,6 +25,13 @@ commands:
           command: npm ci
           working_directory: frontend
 
+  docker_login:
+    description: "Login to Docker Hub"
+    steps:
+      - run:
+          name: Login to Docker Hub
+          command: echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+
 # Executors
 executors:
   node-executor:
@@ -44,7 +51,9 @@ executors:
 
 # Jobs
 jobs:
-  # Lint and type check backend
+  # ============================================
+  # CI: Lint and Type Check
+  # ============================================
   lint-backend:
     executor: node-executor
     steps:
@@ -55,7 +64,6 @@ jobs:
           command: npm run build
           working_directory: backend
 
-  # Lint and type check frontend
   lint-frontend:
     executor: node-executor
     steps:
@@ -66,7 +74,9 @@ jobs:
           command: npm run build
           working_directory: frontend
 
-  # Build and test backend
+  # ============================================
+  # CI: Test with Database
+  # ============================================
   test-backend:
     executor: node-with-postgres
     steps:
@@ -95,89 +105,106 @@ jobs:
           command: npm run build
           working_directory: backend
 
-  # Build frontend for production
-  build-frontend:
-    executor: node-executor
-    steps:
-      - checkout
-      - setup_frontend
-      - run:
-          name: Build frontend
-          command: npm run build
-          working_directory: frontend
-      - persist_to_workspace:
-          root: frontend
-          paths:
-            - dist
-
-  # Build Docker images
-  build-docker:
+  # ============================================
+  # CD: Build & Push Docker Images to Docker Hub
+  # ============================================
+  build-and-push-backend:
     executor: docker/docker
     steps:
       - checkout
       - setup_remote_docker:
           version: 20.10.24
+      - docker_login
       - run:
-          name: Build backend image
+          name: Build backend Docker image
           command: |
-            docker build -f backend/Dockerfile.prod -t wedding-backend:${CIRCLE_SHA1} backend/
+            docker build \
+              -f backend/Dockerfile.prod \
+              -t ${DOCKERHUB_USERNAME}/wedding-backend:${CIRCLE_SHA1} \
+              -t ${DOCKERHUB_USERNAME}/wedding-backend:latest \
+              backend/
       - run:
-          name: Build frontend image
+          name: Push backend image to Docker Hub
           command: |
-            docker build -f frontend/Dockerfile.prod -t wedding-frontend:${CIRCLE_SHA1} frontend/
+            docker push ${DOCKERHUB_USERNAME}/wedding-backend:${CIRCLE_SHA1}
+            docker push ${DOCKERHUB_USERNAME}/wedding-backend:latest
 
-  # Deploy to production (manual trigger)
-  deploy:
-    executor: node-executor
+  build-and-push-frontend:
+    executor: docker/docker
     steps:
       - checkout
-      - add_ssh_keys:
-          fingerprints:
-            - "${SSH_FINGERPRINT}"
+      - setup_remote_docker:
+          version: 20.10.24
+      - docker_login
       - run:
-          name: Deploy to server
+          name: Build frontend Docker image
           command: |
-            echo "Deploying to production server..."
-            # Add your deployment commands here
-            # Example: ssh user@server "cd /app && docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d"
-            echo "Deployment placeholder - configure your deployment target"
+            docker build \
+              -f frontend/Dockerfile.prod \
+              -t ${DOCKERHUB_USERNAME}/wedding-frontend:${CIRCLE_SHA1} \
+              -t ${DOCKERHUB_USERNAME}/wedding-frontend:latest \
+              frontend/
+      - run:
+          name: Push frontend image to Docker Hub
+          command: |
+            docker push ${DOCKERHUB_USERNAME}/wedding-frontend:${CIRCLE_SHA1}
+            docker push ${DOCKERHUB_USERNAME}/wedding-frontend:latest
+
+  build-and-push-nginx:
+    executor: docker/docker
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 20.10.24
+      - docker_login
+      - run:
+          name: Build nginx Docker image
+          command: |
+            docker build \
+              -f nginx/Dockerfile \
+              -t ${DOCKERHUB_USERNAME}/wedding-nginx:${CIRCLE_SHA1} \
+              -t ${DOCKERHUB_USERNAME}/wedding-nginx:latest \
+              nginx/
+      - run:
+          name: Push nginx image to Docker Hub
+          command: |
+            docker push ${DOCKERHUB_USERNAME}/wedding-nginx:${CIRCLE_SHA1}
+            docker push ${DOCKERHUB_USERNAME}/wedding-nginx:latest
 
 # Workflows
 workflows:
   version: 2
 
-  # CI workflow - runs on every push
-  build-and-test:
+  # CI Pipeline - Build, Test, Push to Docker Hub
+  build-test-push:
     jobs:
+      # Stage 1: Lint (parallel)
       - lint-backend
       - lint-frontend
+
+      # Stage 2: Test
       - test-backend:
           requires:
             - lint-backend
-      - build-frontend:
-          requires:
-            - lint-frontend
-      - build-docker:
+
+      # Stage 3: Build & Push Docker images (only on main)
+      - build-and-push-backend:
           requires:
             - test-backend
-            - build-frontend
           filters:
             branches:
-              only:
-                - main
-                - develop
+              only: main
 
-  # CD workflow - manual deployment to production
-  # deploy-production:
-  #   jobs:
-  #     - hold-for-approval:
-  #         type: approval
-  #         filters:
-  #           branches:
-  #             only: main
-  #     - deploy:
-  #         requires:
-  #           - hold-for-approval
-  #         filters:
-  #           branches:
-  #             only: main
+      - build-and-push-frontend:
+          requires:
+            - lint-frontend
+          filters:
+            branches:
+              only: main
+
+      - build-and-push-nginx:
+          requires:
+            - lint-frontend
+          filters:
+            branches:
+              only: main
