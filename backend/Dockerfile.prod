@@ -29,6 +29,9 @@ RUN npm ci --omit=dev
 # Copy built JavaScript from builder stage
 COPY --from=builder /app/dist ./dist
 
+# Copy migrations folder (SQL files needed at runtime)
+COPY --from=builder /app/src/db/migrations ./dist/db/migrations
+
 # Copy entrypoint script
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
