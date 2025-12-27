@@ -13,7 +13,7 @@ eventsRouter.use('*', authMiddleware);
 const eventSchema = z.object({
     title: z.string().min(2),
     location: z.string().min(2),
-    locationUrl: z.string().url().optional(),
+    locationUrl: z.union([z.string().url(), z.literal('')]).optional(),
     address: z.string().optional(),
     startTime: z.string(),
     endTime: z.string().optional(),
