@@ -16,7 +16,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - uploads_data:/app/uploads
+      - /home/upload:/app/uploads
     restart: unless-stopped
     networks:
       - wedding_network
@@ -31,9 +31,6 @@ services:
     restart: unless-stopped
     networks:
       - wedding_network
-
-volumes:
-  uploads_data:
 
 networks:
   wedding_network:

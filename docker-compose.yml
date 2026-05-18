@@ -17,7 +17,7 @@ services:
       - "3000:3000"
     volumes:
       - ./backend/src:/app/src
-      - uploads_data:/app/uploads
+      - /home/upload:/app/uploads
     restart: unless-stopped
 
   frontend:
@@ -35,6 +35,3 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
-
-volumes:
-  uploads_data:
