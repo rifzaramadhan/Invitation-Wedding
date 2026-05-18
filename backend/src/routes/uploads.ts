@@ -100,13 +100,14 @@ uploadsRouter.get('/file/*', async (c) => {
             }
 
             const token = authHeader.substring(7);
-            const payload = verifyToken(token);
+            const payload = verifyToken(token) as ({ userId?: string; id?: string } | null);
             if (!payload) {
                 return c.json({ error: 'Invalid token' }, 401);
             }
 
+            const requestUserId = payload.userId ?? payload.id;
             const fileOwnerId = extractUserIdFromKey(key);
-            if (!fileOwnerId || fileOwnerId !== payload.userId) {
+            if (!requestUserId || !fileOwnerId || fileOwnerId !== requestUserId) {
                 return c.json({ error: 'Forbidden' }, 403);
             }
         }

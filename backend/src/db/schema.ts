@@ -81,13 +81,51 @@ export const wishes = pgTable('wishes', {
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
-// Relations
+// Media files - temporary and permanent uploads (images & audio)
+export const mediaFiles = pgTable('media_files', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    originalFilename: text('original_filename').notNull(),
+    generatedFilename: text('generated_filename').notNull(),
+    storageKey: text('storage_key').notNull(),
+    mimeType: text('mime_type').notNull(),
+    fileSize: integer('file_size').notNull(),
+    type: text('type').notNull(),
+    status: text('status').notNull().default('temporary'),
+    entityType: text('entity_type'),
+    entityId: uuid('entity_id'),
+    entityField: text('entity_field'),
+    publicUrl: text('public_url'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    committedAt: timestamp('committed_at', { withTimezone: true }),
+});
+
+// Gallery table - additional photos for the wedding
+export const weddingGallery = pgTable('wedding_gallery', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    weddingId: uuid('wedding_id').notNull().references(() => weddings.id, { onDelete: 'cascade' }),
+    url: text('url').notNull(),
+    alt: text('alt'),
+    order: integer('order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Relations (defined after all tables to avoid forward-reference errors in Drizzle)
 export const usersRelations = relations(users, ({ many }) => ({
     weddings: many(weddings),
     mediaFiles: many(mediaFiles),
 }));
 
-
+export const weddingsRelations = relations(weddings, ({ one, many }) => ({
+    user: one(users, {
+        fields: [weddings.userId],
+        references: [users.id],
+    }),
+    events: many(events),
+    guests: many(guests),
+    wishes: many(wishes),
+    gallery: many(weddingGallery),
+}));
 
 export const eventsRelations = relations(events, ({ one }) => ({
     wedding: one(weddings, {
@@ -115,25 +153,6 @@ export const wishesRelations = relations(wishes, ({ one }) => ({
     }),
 }));
 
-// Media files - temporary and permanent uploads (images & audio)
-export const mediaFiles = pgTable('media_files', {
-    id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-    originalFilename: text('original_filename').notNull(),
-    generatedFilename: text('generated_filename').notNull(),
-    storageKey: text('storage_key').notNull(),
-    mimeType: text('mime_type').notNull(),
-    fileSize: integer('file_size').notNull(),
-    type: text('type').notNull(), // 'image' | 'audio'
-    status: text('status').notNull().default('temporary'), // 'temporary' | 'permanent'
-    entityType: text('entity_type'), // 'wedding' | 'gallery'
-    entityId: uuid('entity_id'),
-    entityField: text('entity_field'), // e.g. groomPhoto, coverImage, musicUrl
-    publicUrl: text('public_url'),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-    committedAt: timestamp('committed_at', { withTimezone: true }),
-});
-
 export const mediaFilesRelations = relations(mediaFiles, ({ one }) => ({
     user: one(users, {
         fields: [mediaFiles.userId],
@@ -141,31 +160,9 @@ export const mediaFilesRelations = relations(mediaFiles, ({ one }) => ({
     }),
 }));
 
-// Gallery table - additional photos for the wedding
-export const weddingGallery = pgTable('wedding_gallery', {
-    id: uuid('id').primaryKey().defaultRandom(),
-    weddingId: uuid('wedding_id').notNull().references(() => weddings.id, { onDelete: 'cascade' }),
-    url: text('url').notNull(),
-    alt: text('alt'),
-    order: integer('order').default(0).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
-
 export const weddingGalleryRelations = relations(weddingGallery, ({ one }) => ({
     wedding: one(weddings, {
         fields: [weddingGallery.weddingId],
         references: [weddings.id],
     }),
-}));
-
-// Update wedding relations to include gallery
-export const weddingsRelations = relations(weddings, ({ one, many }) => ({
-    user: one(users, {
-        fields: [weddings.userId],
-        references: [users.id],
-    }),
-    events: many(events),
-    guests: many(guests),
-    wishes: many(wishes),
-    gallery: many(weddingGallery),
 }));

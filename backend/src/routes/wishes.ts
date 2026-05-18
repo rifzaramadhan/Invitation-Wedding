@@ -56,7 +56,7 @@ wishesRouter.put('/wishes/:id/approve', authMiddleware, async (c) => {
         with: { wedding: true },
     });
 
-    if (!wish || wish.wedding.userId !== userId) {
+    if (!wish || !wish.wedding || wish.wedding.userId !== userId) {
         return c.json({ error: 'Wish not found' }, 404);
     }
 
@@ -78,7 +78,7 @@ wishesRouter.delete('/wishes/:id', authMiddleware, async (c) => {
         with: { wedding: true },
     });
 
-    if (!wish || wish.wedding.userId !== userId) {
+    if (!wish || !wish.wedding || wish.wedding.userId !== userId) {
         return c.json({ error: 'Wish not found' }, 404);
     }
 

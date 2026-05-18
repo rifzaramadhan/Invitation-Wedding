@@ -66,6 +66,11 @@ export async function uploadTemporaryMedia(
         publicUrl,
     }).returning();
 
+    if (!record) {
+        await deleteLocalFile(key);
+        throw new Error('Failed to create media record');
+    }
+
     return {
         id: record.id,
         originalFilename: record.originalFilename,
@@ -122,6 +127,10 @@ export async function commitMedia(
         })
         .where(eq(mediaFiles.id, record.id))
         .returning();
+
+    if (!updated) {
+        throw new Error('Failed to update media record');
+    }
 
     return {
         id: updated.id,

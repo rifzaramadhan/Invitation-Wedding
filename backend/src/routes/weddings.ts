@@ -266,7 +266,7 @@ weddingsRouter.delete('/gallery/:id', async (c) => {
         with: { wedding: true },
     });
 
-    if (!photo || photo.wedding.userId !== userId) {
+    if (!photo || !photo.wedding || photo.wedding.userId !== userId) {
         return c.json({ error: 'Photo not found' }, 404);
     }
 

@@ -91,7 +91,7 @@ eventsRouter.put('/events/:id', async (c) => {
             with: { wedding: true },
         });
 
-        if (!event || event.wedding.userId !== userId) {
+        if (!event || !event.wedding || event.wedding.userId !== userId) {
             return c.json({ error: 'Event not found' }, 404);
         }
 
@@ -124,7 +124,7 @@ eventsRouter.delete('/events/:id', async (c) => {
         with: { wedding: true },
     });
 
-    if (!event || event.wedding.userId !== userId) {
+    if (!event || !event.wedding || event.wedding.userId !== userId) {
         return c.json({ error: 'Event not found' }, 404);
     }
 

@@ -46,6 +46,10 @@ auth.post('/register', async (c) => {
             name,
         }).returning({ id: users.id, email: users.email, name: users.name });
 
+        if (!user) {
+            return c.json({ error: 'Failed to create user' }, 500);
+        }
+
         const token = generateToken({ userId: user.id, email: user.email });
 
         return c.json({ user, token });

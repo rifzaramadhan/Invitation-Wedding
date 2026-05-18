@@ -16,10 +16,14 @@ import { startMediaCleanupScheduler } from './jobs/media-cleanup.js';
 
 const app = new Hono();
 
+const corsOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
+    : ['http://localhost:5173', 'http://localhost:3000'];
+
 // Middleware
 app.use('*', logger());
 app.use('*', cors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: corsOrigins,
     credentials: true,
 }));
 
@@ -44,7 +48,14 @@ app.notFound((c) => c.json({ error: 'Not found' }, 404));
 // Error handler
 app.onError((err, c) => {
     console.error('Unhandled error:', err);
-    return c.json({ error: 'Internal server error' }, 500);
+    const message = err instanceof Error ? err.message : 'Internal server error';
+    const isDev = process.env.NODE_ENV !== 'production';
+    return c.json(
+        {
+            error: isDev ? message : 'Internal server error',
+        },
+        500
+    );
 });
 
 const port = parseInt(process.env.PORT || '3000');

@@ -122,7 +122,7 @@ guestsRouter.put('/guests/:id', async (c) => {
             with: { wedding: true },
         });
 
-        if (!guest || guest.wedding.userId !== userId) {
+        if (!guest || !guest.wedding || guest.wedding.userId !== userId) {
             return c.json({ error: 'Guest not found' }, 404);
         }
 
@@ -151,7 +151,7 @@ guestsRouter.delete('/guests/:id', async (c) => {
         with: { wedding: true },
     });
 
-    if (!guest || guest.wedding.userId !== userId) {
+    if (!guest || !guest.wedding || guest.wedding.userId !== userId) {
         return c.json({ error: 'Guest not found' }, 404);
     }
 
