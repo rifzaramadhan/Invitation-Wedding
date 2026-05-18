@@ -1,64 +1,163 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Music, Image, AlertCircle, CheckCircle } from 'lucide-react';
-import { uploadsApi } from '../../api/client';
+import { mediaApi, MediaUploadMeta } from '../../api/client';
 
 interface FileUploadProps {
     type: 'image' | 'audio';
     value?: string;
-    onChange: (url: string) => void;
+    mediaId?: string;
+    onChange: (url: string, meta?: MediaUploadMeta) => void;
     label?: string;
     accept?: string;
+    deferCommit?: boolean;
+}
+
+const API_URL = import.meta.env.VITE_API_URL || '';
+
+function resolvePublicUrl(url: string): string {
+    if (url.startsWith('/api/')) {
+        return `${API_URL}${url}`;
+    }
+    return url;
+}
+
+function isTemporaryUrl(url: string): boolean {
+    return url.includes('/tmp/');
 }
 
 export default function FileUpload({
     type,
     value,
+    mediaId,
     onChange,
     label,
     accept,
+    deferCommit = true,
 }: FileUploadProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
+    const [currentMediaId, setCurrentMediaId] = useState<string | undefined>(mediaId);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [displayName, setDisplayName] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const localPreviewRef = useRef<string | null>(null);
 
     const defaultAccept = type === 'image'
         ? 'image/jpeg,image/png,image/webp,image/gif'
         : 'audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/aac,audio/m4a';
 
-    const maxSize = type === 'image' ? 10 : 20; // MB
+    const maxSize = type === 'image' ? 10 : 20;
+
+    const revokeLocalPreview = useCallback(() => {
+        if (localPreviewRef.current) {
+            URL.revokeObjectURL(localPreviewRef.current);
+            localPreviewRef.current = null;
+        }
+    }, []);
+
+    useEffect(() => {
+        setCurrentMediaId(mediaId);
+    }, [mediaId]);
+
+    useEffect(() => {
+        if (!value) {
+            revokeLocalPreview();
+            setPreviewUrl(null);
+            return;
+        }
+
+        if (localPreviewRef.current) {
+            setPreviewUrl(localPreviewRef.current);
+            return;
+        }
+
+        let objectUrl: string | null = null;
+        let cancelled = false;
+
+        const loadPreview = async () => {
+            if (isTemporaryUrl(value) && (currentMediaId || mediaId)) {
+                try {
+                    const response = await mediaApi.preview(currentMediaId || mediaId!);
+                    if (cancelled) return;
+                    objectUrl = URL.createObjectURL(response.data);
+                    setPreviewUrl(objectUrl);
+                } catch (err) {
+                    console.error('Failed to load temporary preview:', err);
+                    if (!cancelled) {
+                        setPreviewUrl(null);
+                    }
+                }
+                return;
+            }
+
+            setPreviewUrl(resolvePublicUrl(value));
+        };
+
+        void loadPreview();
+
+        return () => {
+            cancelled = true;
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+            }
+        };
+    }, [value, currentMediaId, mediaId, revokeLocalPreview]);
 
     const handleUpload = useCallback(async (file: File) => {
         setError(null);
         setProgress(0);
 
-        // Validate file size
         const maxBytes = maxSize * 1024 * 1024;
         if (file.size > maxBytes) {
             setError(`File too large. Maximum size is ${maxSize}MB.`);
             return;
         }
 
+        revokeLocalPreview();
+        const localPreview = URL.createObjectURL(file);
+        localPreviewRef.current = localPreview;
+        setPreviewUrl(localPreview);
+        setDisplayName(file.name);
         setIsUploading(true);
 
         try {
-            // Upload directly to backend local storage
-            const { data } = await uploadsApi.uploadFile(file, type, (percent) => {
-                setProgress(percent);
-            });
+            if (deferCommit) {
+                const { data } = await mediaApi.uploadTemp(file, type, (percent) => {
+                    setProgress(percent);
+                });
 
-            // Return the public URL
-            onChange(data.publicUrl);
+                setCurrentMediaId(data.id);
+                setDisplayName(data.originalFilename);
+                onChange(data.previewUrl, {
+                    mediaId: data.id,
+                    isTemporary: true,
+                    previewUrl: data.previewUrl,
+                });
+            } else {
+                const { uploadsApi } = await import('../../api/client');
+                const { data } = await uploadsApi.uploadFile(file, type, (percent) => {
+                    setProgress(percent);
+                });
+
+                revokeLocalPreview();
+                setCurrentMediaId(undefined);
+                setDisplayName(file.name);
+                onChange(data.publicUrl, { isTemporary: false });
+            }
+
             setProgress(100);
         } catch (err) {
+            revokeLocalPreview();
+            setPreviewUrl(null);
             console.error('Upload error:', err);
             setError(err instanceof Error ? err.message : 'Upload failed. Please try again.');
         } finally {
             setIsUploading(false);
         }
-    }, [type, maxSize, onChange]);
+    }, [type, maxSize, onChange, deferCommit, revokeLocalPreview]);
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -85,45 +184,45 @@ export default function FileUpload({
         if (file) {
             handleUpload(file);
         }
-        // Reset input so the same file can be selected again
         e.target.value = '';
     }, [handleUpload]);
 
     const handleRemove = useCallback(async () => {
-        if (!value) return;
-
-        // If it's a key (starts with /api/uploads/file/), extract and delete
-        if (value.startsWith('/api/uploads/file/')) {
+        if (currentMediaId && deferCommit) {
+            try {
+                await mediaApi.delete(currentMediaId);
+            } catch (err) {
+                console.error('Failed to delete temporary media:', err);
+            }
+        } else if (value?.startsWith('/api/uploads/file/') && !isTemporaryUrl(value)) {
             const key = decodeURIComponent(value.replace('/api/uploads/file/', ''));
             try {
+                const { uploadsApi } = await import('../../api/client');
                 await uploadsApi.deleteFile(key);
             } catch (err) {
                 console.error('Failed to delete file:', err);
             }
         }
 
-        onChange('');
-    }, [value, onChange]);
+        revokeLocalPreview();
+        setCurrentMediaId(undefined);
+        setDisplayName(null);
+        setPreviewUrl(null);
+        onChange('', { isTemporary: false });
+    }, [value, currentMediaId, deferCommit, onChange, revokeLocalPreview]);
 
-    const getPreviewUrl = () => {
-        if (!value) return null;
-        // If it's a relative path (from our proxy), prepend the API URL
-        if (value.startsWith('/api/')) {
-            const apiUrl = import.meta.env.VITE_API_URL || '';
-            return `${apiUrl}${value}`;
-        }
-        return value;
-    };
+    useEffect(() => () => revokeLocalPreview(), [revokeLocalPreview]);
 
     const getFileName = () => {
+        if (displayName) return displayName;
         if (!value) return null;
-        // Extract filename from URL or key
         const parts = value.split('/');
         const lastPart = parts[parts.length - 1];
-        // Remove UUID prefix if present
         const match = lastPart.match(/^[a-f0-9-]+-(.+)$/);
         return match ? match[1] : lastPart;
     };
+
+    const isPending = Boolean(value && deferCommit && currentMediaId);
 
     return (
         <div className="space-y-2">
@@ -133,10 +232,8 @@ export default function FileUpload({
                 </label>
             )}
 
-            {/* Upload area or preview */}
             <div className="relative">
                 {value && !isUploading ? (
-                    // Preview
                     <div className="relative rounded-xl border border-secondary-200 bg-secondary-50 p-4">
                         <button
                             type="button"
@@ -149,7 +246,7 @@ export default function FileUpload({
                         {type === 'image' ? (
                             <div className="flex items-center gap-4">
                                 <img
-                                    src={getPreviewUrl() || ''}
+                                    src={previewUrl || ''}
                                     alt="Preview"
                                     className="w-20 h-20 object-cover rounded-lg shadow-sm"
                                     onError={(e) => {
@@ -160,9 +257,9 @@ export default function FileUpload({
                                     <p className="text-sm font-medium text-secondary-800 truncate">
                                         {getFileName()}
                                     </p>
-                                    <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
+                                    <p className={`text-xs flex items-center gap-1 mt-1 ${isPending ? 'text-amber-600' : 'text-green-600'}`}>
                                         <CheckCircle className="w-3 h-3" />
-                                        Uploaded successfully
+                                        {isPending ? 'Uploaded (save to confirm)' : 'Uploaded successfully'}
                                     </p>
                                 </div>
                             </div>
@@ -175,16 +272,15 @@ export default function FileUpload({
                                     <p className="text-sm font-medium text-secondary-800 truncate">
                                         {getFileName()}
                                     </p>
-                                    <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
+                                    <p className={`text-xs flex items-center gap-1 mt-1 ${isPending ? 'text-amber-600' : 'text-green-600'}`}>
                                         <CheckCircle className="w-3 h-3" />
-                                        Uploaded successfully
+                                        {isPending ? 'Uploaded (save to confirm)' : 'Uploaded successfully'}
                                     </p>
                                 </div>
                             </div>
                         )}
                     </div>
                 ) : (
-                    // Upload zone
                     <div
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
@@ -210,9 +306,17 @@ export default function FileUpload({
 
                         {isUploading ? (
                             <div className="space-y-3">
-                                <div className="w-12 h-12 mx-auto rounded-full bg-primary-100 flex items-center justify-center">
-                                    <div className="w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
-                                </div>
+                                {type === 'image' && previewUrl ? (
+                                    <img
+                                        src={previewUrl}
+                                        alt="Upload preview"
+                                        className="w-20 h-20 mx-auto object-cover rounded-lg shadow-sm opacity-80"
+                                    />
+                                ) : (
+                                    <div className="w-12 h-12 mx-auto rounded-full bg-primary-100 flex items-center justify-center">
+                                        <div className="w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                                    </div>
+                                )}
                                 <div>
                                     <p className="text-sm font-medium text-secondary-700">
                                         Uploading...
@@ -253,7 +357,6 @@ export default function FileUpload({
                     </div>
                 )}
 
-                {/* Error message */}
                 <AnimatePresence>
                     {error && (
                         <motion.div

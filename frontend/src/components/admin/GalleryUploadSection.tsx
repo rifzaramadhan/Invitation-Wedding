@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, AlertCircle, Plus } from 'lucide-react';
-import { GalleryImage, weddingsApi } from '../../api/client';
+import { GalleryImage, MediaUploadMeta, weddingsApi } from '../../api/client';
 import FileUpload from './FileUpload';
 
 interface GalleryUploadSectionProps {
@@ -17,20 +17,35 @@ export default function GalleryUploadSection({
 }: GalleryUploadSectionProps) {
     const [error, setError] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    const [pendingMediaId, setPendingMediaId] = useState<string | null>(null);
+    const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string>('');
 
-    const handleUploadDefault = async (url: string) => {
-        if (!url) return;
+    const handleUpload = async (_url: string, meta?: MediaUploadMeta) => {
+        if (!meta?.mediaId) return;
 
         try {
             setError(null);
             await weddingsApi.addGalleryPhoto(weddingId, {
-                url,
+                mediaId: meta.mediaId,
                 order: images.length,
             });
+            setPendingMediaId(null);
+            setPendingPreviewUrl('');
             onUpdate();
         } catch (err) {
             console.error('Failed to add photo:', err);
             setError('Failed to save photo to gallery');
+        }
+    };
+
+    const handlePendingChange = (url: string, meta?: MediaUploadMeta) => {
+        setPendingPreviewUrl(url);
+        setPendingMediaId(meta?.mediaId ?? null);
+
+        if (meta?.mediaId && url) {
+            void handleUpload(url, meta);
+        } else if (!url) {
+            setPendingMediaId(null);
         }
     };
 
@@ -77,7 +92,6 @@ export default function GalleryUploadSection({
             )}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {/* Existing Images */}
                 <AnimatePresence>
                     {images.map((image) => (
                         <motion.div
@@ -89,7 +103,9 @@ export default function GalleryUploadSection({
                             className="relative aspect-square group"
                         >
                             <img
-                                src={image.url}
+                                src={image.url.startsWith('/api/')
+                                    ? `${import.meta.env.VITE_API_URL || ''}${image.url}`
+                                    : image.url}
                                 alt={image.alt || 'Gallery photo'}
                                 className="w-full h-full object-cover rounded-lg border border-secondary-200"
                             />
@@ -110,11 +126,12 @@ export default function GalleryUploadSection({
                     ))}
                 </AnimatePresence>
 
-                {/* Upload New Image */}
                 <div className="aspect-square">
                     <FileUpload
                         type="image"
-                        onChange={handleUploadDefault}
+                        value={pendingPreviewUrl}
+                        mediaId={pendingMediaId ?? undefined}
+                        onChange={handlePendingChange}
                         label="Add Photo"
                     />
                 </div>
@@ -125,7 +142,7 @@ export default function GalleryUploadSection({
                     <div className="w-12 h-12 mx-auto bg-secondary-100 rounded-full flex items-center justify-center mb-3">
                         <Plus className="w-6 h-6 text-secondary-400" />
                     </div>
-                    <p className="text-secondary-600">No photos locally</p>
+                    <p className="text-secondary-600">No photos yet</p>
                     <p className="text-sm text-secondary-400 mt-1">Upload photos to show in the gallery collage</p>
                 </div>
             )}

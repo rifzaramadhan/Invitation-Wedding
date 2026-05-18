@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { z } from 'zod';
 import fs from 'fs';
 import { authMiddleware } from '../middleware/auth.js';
+import { verifyToken } from '../utils/jwt.js';
 import {
     validateContentType,
     getMaxFileSize,
@@ -9,37 +9,37 @@ import {
     ALLOWED_AUDIO_TYPES,
     saveFileLocal,
     getLocalFilePath,
-    deleteLocalFile
+    deleteLocalFile,
+    isValidStorageKey,
+    extractUserIdFromKey,
+    getContentTypeFromKey,
 } from '../utils/local-storage.js';
 
 const uploadsRouter = new Hono();
 
 /**
  * POST /api/uploads/
- * Upload a file directly to local storage
+ * Direct upload to permanent storage (legacy endpoint)
  */
 uploadsRouter.post('/', authMiddleware, async (c) => {
     try {
         const { userId } = c.get('user');
-        
-        // Parse multipart/form-data
+
         const body = await c.req.parseBody();
         const file = body['file'];
         const typeStr = body['type'] as string;
-        
+
         if (!file || !(file instanceof File)) {
             return c.json({ error: 'File is required' }, 400);
         }
-        
+
         if (typeStr !== 'image' && typeStr !== 'audio') {
             return c.json({ error: 'Invalid type, must be image or audio' }, 400);
         }
-        
+
         const type = typeStr as 'image' | 'audio';
         const contentType = file.type;
-        const filename = file.name;
 
-        // Validate content type
         if (!validateContentType(contentType, type)) {
             const allowedTypes = type === 'image' ? ALLOWED_IMAGE_TYPES : ALLOWED_AUDIO_TYPES;
             return c.json(
@@ -50,15 +50,13 @@ uploadsRouter.post('/', authMiddleware, async (c) => {
             );
         }
 
-        // Validate file size
         const maxSize = getMaxFileSize(type);
         if (file.size > maxSize) {
             return c.json({ error: `File too large. Maximum size is ${maxSize / (1024 * 1024)}MB.` }, 400);
         }
 
-        // Read file buffer and save locally
         const arrayBuffer = await file.arrayBuffer();
-        const { key, publicUrl } = await saveFileLocal(userId, type, filename, arrayBuffer);
+        const { key, publicUrl } = await saveFileLocal(userId, type, file.name, arrayBuffer);
 
         return c.json({
             key,
@@ -71,18 +69,46 @@ uploadsRouter.post('/', authMiddleware, async (c) => {
     }
 });
 
+function extractFileKeyFromPath(pathname: string): string {
+    const prefixes = ['/api/uploads/file/', '/uploads/file/', '/file/'];
+    for (const prefix of prefixes) {
+        const index = pathname.indexOf(prefix);
+        if (index !== -1) {
+            return decodeURIComponent(pathname.slice(index + prefix.length));
+        }
+    }
+    return decodeURIComponent(pathname.replace(/^\/api\/uploads\/file\//, ''));
+}
+
 /**
  * GET /api/uploads/file/*
- * Serve files from local storage
+ * Serve files from local storage (public permanent, auth-protected temporary)
  */
 uploadsRouter.get('/file/*', async (c) => {
     try {
-        // Get the full path after /file/
-        const key = c.req.path.replace('/api/uploads/file/', '');
+        const pathname = new URL(c.req.url).pathname;
+        const key = extractFileKeyFromPath(pathname);
 
-        // Security: validate key format (prevent directory traversal)
-        if (!key.startsWith('weddings/') || key.includes('..')) {
+        if (!isValidStorageKey(key)) {
             return c.json({ error: 'Invalid file key' }, 400);
+        }
+
+        if (key.startsWith('tmp/')) {
+            const authHeader = c.req.header('Authorization');
+            if (!authHeader?.startsWith('Bearer ')) {
+                return c.json({ error: 'Unauthorized' }, 401);
+            }
+
+            const token = authHeader.substring(7);
+            const payload = verifyToken(token);
+            if (!payload) {
+                return c.json({ error: 'Invalid token' }, 401);
+            }
+
+            const fileOwnerId = extractUserIdFromKey(key);
+            if (!fileOwnerId || fileOwnerId !== payload.userId) {
+                return c.json({ error: 'Forbidden' }, 403);
+            }
         }
 
         const filePath = getLocalFilePath(key);
@@ -90,25 +116,18 @@ uploadsRouter.get('/file/*', async (c) => {
         if (!fs.existsSync(filePath)) {
             return c.json({ error: 'File not found' }, 404);
         }
-        
+
         const stat = fs.statSync(filePath);
         const fileSize = stat.size;
-        
-        // Very basic content type mapping
-        let contentType = 'application/octet-stream';
-        if (key.endsWith('.jpg') || key.endsWith('.jpeg')) contentType = 'image/jpeg';
-        else if (key.endsWith('.png')) contentType = 'image/png';
-        else if (key.endsWith('.webp')) contentType = 'image/webp';
-        else if (key.endsWith('.gif')) contentType = 'image/gif';
-        else if (key.endsWith('.mp3')) contentType = 'audio/mpeg';
-        else if (key.endsWith('.wav')) contentType = 'audio/wav';
-        
+        const contentType = getContentTypeFromKey(key);
+
         c.header('Content-Type', contentType);
         c.header('Content-Length', fileSize.toString());
-        c.header('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+        c.header('Cache-Control', key.startsWith('tmp/')
+            ? 'private, max-age=3600'
+            : 'public, max-age=31536000');
         c.header('Accept-Ranges', 'bytes');
 
-        // Handle range requests for audio streaming
         const rangeHeader = c.req.header('Range');
         if (rangeHeader) {
             const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
@@ -119,21 +138,12 @@ uploadsRouter.get('/file/*', async (c) => {
                 c.status(206);
                 c.header('Content-Range', `bytes ${start}-${end}/${fileSize}`);
                 c.header('Content-Length', (end - start + 1).toString());
-                
-                // Hono supports Web Streams natively, but passing a Node readable stream directly
-                // works well in Node.js environments.
+
                 const stream = fs.createReadStream(filePath, { start, end });
-                // We convert Node stream to web stream or let Hono handle it depending on the adapter.
-                // In hono/node-server it handles Node streams if returned. But to be safe, return readable stream.
-                // For simplicity, since it's a fallback, let's just use Node stream and Hono's stream helper if needed.
-                // We can use Response directly or just c.body()
-                
-                // Actually, passing fs stream to c.body works in Hono node-server.
                 return c.body(stream as any);
             }
         }
 
-        // Return full file
         const stream = fs.createReadStream(filePath);
         return c.body(stream as any);
     } catch (err: unknown) {
@@ -149,16 +159,15 @@ uploadsRouter.get('/file/*', async (c) => {
 uploadsRouter.delete('/file/*', authMiddleware, async (c) => {
     try {
         const { userId } = c.get('user');
-        const key = c.req.path.replace('/api/uploads/file/', '');
+        const pathname = new URL(c.req.url).pathname;
+        const key = extractFileKeyFromPath(pathname);
 
-        // Security: validate key format and ownership, prevent directory traversal
-        if (!key.startsWith('weddings/') || key.includes('..')) {
+        if (!isValidStorageKey(key)) {
             return c.json({ error: 'Invalid file key' }, 400);
         }
 
-        // Check if user owns this file
-        const expectedPrefix = `weddings/${userId}/`;
-        if (!key.startsWith(expectedPrefix)) {
+        const fileOwnerId = extractUserIdFromKey(key);
+        if (!fileOwnerId || fileOwnerId !== userId) {
             return c.json({ error: 'Unauthorized to delete this file' }, 403);
         }
 

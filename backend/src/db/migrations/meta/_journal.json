@@ -15,6 +15,20 @@
       "when": 1765181586010,
       "tag": "0001_typical_tiger_shark",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779097335499,
+      "tag": "0002_first_professor_monster",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779200000000,
+      "tag": "0003_media_files",
+      "breakpoints": true
     }
   ]
 }

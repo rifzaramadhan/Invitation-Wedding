@@ -84,6 +84,7 @@ export const wishes = pgTable('wishes', {
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
     weddings: many(weddings),
+    mediaFiles: many(mediaFiles),
 }));
 
 
@@ -111,6 +112,32 @@ export const wishesRelations = relations(wishes, ({ one }) => ({
     guest: one(guests, {
         fields: [wishes.guestId],
         references: [guests.id],
+    }),
+}));
+
+// Media files - temporary and permanent uploads (images & audio)
+export const mediaFiles = pgTable('media_files', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    originalFilename: text('original_filename').notNull(),
+    generatedFilename: text('generated_filename').notNull(),
+    storageKey: text('storage_key').notNull(),
+    mimeType: text('mime_type').notNull(),
+    fileSize: integer('file_size').notNull(),
+    type: text('type').notNull(), // 'image' | 'audio'
+    status: text('status').notNull().default('temporary'), // 'temporary' | 'permanent'
+    entityType: text('entity_type'), // 'wedding' | 'gallery'
+    entityId: uuid('entity_id'),
+    entityField: text('entity_field'), // e.g. groomPhoto, coverImage, musicUrl
+    publicUrl: text('public_url'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    committedAt: timestamp('committed_at', { withTimezone: true }),
+});
+
+export const mediaFilesRelations = relations(mediaFiles, ({ one }) => ({
+    user: one(users, {
+        fields: [mediaFiles.userId],
+        references: [users.id],
     }),
 }));
 

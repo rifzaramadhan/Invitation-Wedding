@@ -47,7 +47,7 @@ export const weddingsApi = {
     update: (id: string, data: Partial<WeddingInput>) => api.put(`/weddings/${id}`, data),
     delete: (id: string) => api.delete(`/weddings/${id}`),
     stats: (id: string) => api.get(`/weddings/${id}/stats`),
-    addGalleryPhoto: (id: string, data: { url: string; alt?: string; order?: number }) =>
+    addGalleryPhoto: (id: string, data: { url?: string; mediaId?: string; alt?: string; order?: number }) =>
         api.post(`/weddings/${id}/gallery`, data),
     deleteGalleryPhoto: (id: string) => api.delete(`/weddings/gallery/${id}`),
 };
@@ -87,6 +87,71 @@ export const publicApi = {
 };
 
 // Uploads API (local file uploads)
+export interface TempMediaUpload {
+    id: string;
+    originalFilename: string;
+    generatedFilename: string;
+    mimeType: string;
+    fileSize: number;
+    previewUrl: string;
+    status: 'temporary' | 'permanent';
+    type: 'image' | 'audio';
+}
+
+export interface MediaCommitItem {
+    mediaId: string;
+    entityType?: 'wedding' | 'gallery';
+    entityId?: string;
+    entityField?: string;
+}
+
+export interface CommittedMedia {
+    id: string;
+    publicUrl: string;
+    storageKey: string;
+    entityType?: string | null;
+    entityId?: string | null;
+    entityField?: string | null;
+}
+
+export interface MediaUploadMeta {
+    mediaId?: string;
+    isTemporary?: boolean;
+    previewUrl?: string;
+}
+
+export const mediaApi = {
+    uploadTemp: async (
+        file: File,
+        type: 'image' | 'audio',
+        onProgress?: (percent: number) => void
+    ) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', type);
+
+        return api.post<TempMediaUpload>('/media/temp', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+            onUploadProgress: (progressEvent) => {
+                if (progressEvent.total && onProgress) {
+                    const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    onProgress(percent);
+                }
+            },
+        });
+    },
+    commit: (mediaId: string, data?: Omit<MediaCommitItem, 'mediaId'>) =>
+        api.post<{ media: CommittedMedia }>(`/media/${mediaId}/commit`, data || {}),
+    commitBatch: (items: MediaCommitItem[]) =>
+        api.post<{ media: CommittedMedia[] }>('/media/commit-batch', { items }),
+    get: (mediaId: string) => api.get(`/media/${mediaId}`),
+    preview: (mediaId: string) =>
+        api.get(`/media/${mediaId}/preview`, { responseType: 'blob' }),
+    delete: (mediaId: string) => api.delete(`/media/${mediaId}`),
+};
+
 export const uploadsApi = {
     uploadFile: async (file: File, type: 'image' | 'audio', onProgress?: (percent: number) => void) => {
         const formData = new FormData();

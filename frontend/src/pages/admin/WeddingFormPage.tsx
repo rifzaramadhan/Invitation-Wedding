@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Save, Trash2, Plus, X, Palette, CheckCircle, AlertCircle } from 'lucide-react';
-import { weddingsApi, eventsApi, Wedding, WeddingInput, EventInput } from '../../api/client';
+import { weddingsApi, eventsApi, mediaApi, Wedding, WeddingInput, EventInput, MediaUploadMeta } from '../../api/client';
 import { getThemeList } from '../../themes/themes';
 import FileUpload from '../../components/admin/FileUpload';
 import GalleryUploadSection from '../../components/admin/GalleryUploadSection';
@@ -38,6 +38,7 @@ export default function WeddingFormPage() {
 
     const [events, setEvents] = useState<(EventInput & { id?: string })[]>([]);
     const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [pendingMedia, setPendingMedia] = useState<Record<string, string>>({});
 
     // Auto-hide notification after 4 seconds
     useEffect(() => {
@@ -95,16 +96,69 @@ export default function WeddingFormPage() {
         }
     }, [weddingData]);
 
+    const mediaFields = ['groomPhoto', 'bridePhoto', 'coverImage', 'musicUrl'] as const;
+
+    const handleMediaChange = (field: typeof mediaFields[number]) => (
+        url: string,
+        meta?: MediaUploadMeta
+    ) => {
+        setFormData((prev) => ({ ...prev, [field]: url }));
+
+        if (meta?.mediaId) {
+            setPendingMedia((prev) => ({ ...prev, [field]: meta.mediaId! }));
+            return;
+        }
+
+        if (!meta?.isTemporary) {
+            setPendingMedia((prev) => {
+                const next = { ...prev };
+                delete next[field];
+                return next;
+            });
+        }
+    };
+
+    const commitPendingMedia = async (weddingId?: string): Promise<WeddingInput> => {
+        const entries = Object.entries(pendingMedia);
+        if (entries.length === 0) {
+            return formData;
+        }
+
+        const { data } = await mediaApi.commitBatch(
+            entries.map(([field, mediaId]) => ({
+                mediaId,
+                entityType: 'wedding' as const,
+                entityId: weddingId,
+                entityField: field,
+            }))
+        );
+
+        const updatedData = { ...formData };
+        for (const media of data.media) {
+            if (!media.entityField) continue;
+            if (media.entityField === 'groomPhoto') updatedData.groomPhoto = media.publicUrl;
+            if (media.entityField === 'bridePhoto') updatedData.bridePhoto = media.publicUrl;
+            if (media.entityField === 'coverImage') updatedData.coverImage = media.publicUrl;
+            if (media.entityField === 'musicUrl') updatedData.musicUrl = media.publicUrl;
+        }
+
+        setPendingMedia({});
+        setFormData(updatedData);
+        return updatedData;
+    };
+
     // Mutations
     const saveMutation = useMutation({
         mutationFn: async () => {
             if (isEditing) {
-                await weddingsApi.update(id!, formData);
+                const dataToSave = await commitPendingMedia(id!);
+                await weddingsApi.update(id!, dataToSave);
                 return id;
-            } else {
-                const res = await weddingsApi.create(formData);
-                return res.data.wedding.id;
             }
+
+            const dataToSave = await commitPendingMedia();
+            const res = await weddingsApi.create(dataToSave);
+            return res.data.wedding.id;
         },
         onSuccess: (weddingId) => {
             queryClient.invalidateQueries({ queryKey: ['weddings'] });
@@ -433,7 +487,8 @@ export default function WeddingFormPage() {
                                             type="image"
                                             label="Groom Photo"
                                             value={formData.groomPhoto}
-                                            onChange={(url) => setFormData({ ...formData, groomPhoto: url })}
+                                            mediaId={pendingMedia.groomPhoto}
+                                            onChange={handleMediaChange('groomPhoto')}
                                         />
                                     </div>
                                 </div>
@@ -485,7 +540,8 @@ export default function WeddingFormPage() {
                                             type="image"
                                             label="Bride Photo"
                                             value={formData.bridePhoto}
-                                            onChange={(url) => setFormData({ ...formData, bridePhoto: url })}
+                                            mediaId={pendingMedia.bridePhoto}
+                                            onChange={handleMediaChange('bridePhoto')}
                                         />
                                     </div>
                                 </div>
@@ -511,13 +567,15 @@ export default function WeddingFormPage() {
                                             type="image"
                                             label="Cover Image"
                                             value={formData.coverImage}
-                                            onChange={(url) => setFormData({ ...formData, coverImage: url })}
+                                            mediaId={pendingMedia.coverImage}
+                                            onChange={handleMediaChange('coverImage')}
                                         />
                                         <FileUpload
                                             type="audio"
                                             label="Background Music"
                                             value={formData.musicUrl}
-                                            onChange={(url) => setFormData({ ...formData, musicUrl: url })}
+                                            mediaId={pendingMedia.musicUrl}
+                                            onChange={handleMediaChange('musicUrl')}
                                         />
                                     </div>
                                 </div>

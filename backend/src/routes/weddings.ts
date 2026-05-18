@@ -4,6 +4,7 @@ import { db } from '../db/index.js';
 import { weddings, events, guests, wishes, weddingGallery } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth.js';
+import { commitMedia } from '../services/media-service.js';
 
 const weddingsRouter = new Hono();
 
@@ -211,9 +212,12 @@ weddingsRouter.post('/:id/gallery', async (c) => {
         const { id } = c.req.param();
         const body = await c.req.json();
         const schema = z.object({
-            url: urlOrPath,
+            url: urlOrPath.optional(),
+            mediaId: z.string().uuid().optional(),
             alt: z.string().optional(),
             order: z.number().optional(),
+        }).refine((data) => data.url || data.mediaId, {
+            message: 'Either url or mediaId is required',
         });
         const data = schema.parse(body);
 
@@ -225,9 +229,19 @@ weddingsRouter.post('/:id/gallery', async (c) => {
             return c.json({ error: 'Wedding not found' }, 404);
         }
 
+        let photoUrl = data.url;
+        if (data.mediaId) {
+            const committed = await commitMedia(userId, {
+                mediaId: data.mediaId,
+                entityType: 'gallery',
+                entityId: id,
+            });
+            photoUrl = committed.publicUrl;
+        }
+
         const [photo] = await db.insert(weddingGallery).values({
             weddingId: id,
-            url: data.url,
+            url: photoUrl!,
             alt: data.alt,
             order: data.order,
         }).returning();

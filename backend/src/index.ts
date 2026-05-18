@@ -11,6 +11,8 @@ import eventsRouter from './routes/events.js';
 import wishesRouter from './routes/wishes.js';
 import publicRouter from './routes/public.js';
 import uploadsRouter from './routes/uploads.js';
+import mediaRouter from './routes/media.js';
+import { startMediaCleanupScheduler } from './jobs/media-cleanup.js';
 
 const app = new Hono();
 
@@ -30,6 +32,7 @@ app.route('/api/weddings', weddingsRouter);
 // Mount uploads before guests/events to prevent their wildcard auth middleware
 // from intercepting public file access requests
 app.route('/api/uploads', uploadsRouter);
+app.route('/api/media', mediaRouter);
 app.route('/api', guestsRouter);
 app.route('/api', eventsRouter);
 app.route('/api', wishesRouter);
@@ -53,3 +56,5 @@ serve({
     fetch: app.fetch,
     port,
 });
+
+startMediaCleanupScheduler();
