@@ -30,6 +30,8 @@ services:
       PORT: 3000
       NODE_ENV: production
       TZ: ${TZ:-Asia/Jakarta}
+    ports:
+      - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,34 +44,14 @@ services:
   frontend:
     image: ${DOCKERHUB_USERNAME:-your-dockerhub-username}/wedding-frontend:latest
     container_name: wedding_frontend
-    volumes:
-      - frontend_dist:/usr/share/nginx/html
-    restart: unless-stopped
-    networks:
-      - wedding_network
-
-  nginx:
-    image: ${DOCKERHUB_USERNAME:-your-dockerhub-username}/wedding-nginx:latest
-    container_name: wedding_nginx
     ports:
-      - "80:80"
-      # Uncomment for HTTPS
-      # - "443:443"
-    volumes:
-      - frontend_dist:/usr/share/nginx/html:ro
-      - uploads_data:/var/www/uploads:ro
-      # Uncomment for SSL certificates
-      # - ./ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - backend
-      - frontend
+      - "5173:3000"
     restart: unless-stopped
     networks:
       - wedding_network
 
 volumes:
   postgres_data:
-  frontend_dist:
   uploads_data:
 
 networks:

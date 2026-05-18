@@ -15,20 +15,18 @@ COPY . .
 # Build the application (output goes to /app/dist)
 RUN npm run build
 
-# Stage 2: Lightweight image to hold and serve static files
+# Stage 2: Lightweight production image
 FROM node:20-alpine
 
 WORKDIR /app
 
+# Install 'serve' - a lightweight static file server
+RUN npm install -g serve
+
 # Copy built static files from builder stage
 COPY --from=builder /app/dist ./dist
 
-# Create a simple script to copy files to the shared volume
-RUN echo '#!/bin/sh' > /copy-dist.sh && \
-    echo 'cp -r /app/dist/* /usr/share/nginx/html/' >> /copy-dist.sh && \
-    echo 'echo "Static files copied to nginx volume"' >> /copy-dist.sh && \
-    echo 'tail -f /dev/null' >> /copy-dist.sh && \
-    chmod +x /copy-dist.sh
+EXPOSE 3000
 
-CMD ["/copy-dist.sh"]
-
+# Serve static files on port 3000 with SPA fallback
+CMD ["serve", "-s", "dist", "-l", "3000"]

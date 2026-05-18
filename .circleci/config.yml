@@ -150,27 +150,6 @@ jobs:
             docker push ${DOCKERHUB_USERNAME}/wedding-frontend:${CIRCLE_SHA1}
             docker push ${DOCKERHUB_USERNAME}/wedding-frontend:latest
 
-  build-and-push-nginx:
-    executor: docker/docker
-    steps:
-      - checkout
-      - setup_remote_docker:
-          version: 20.10.24
-      - docker_login
-      - run:
-          name: Build nginx Docker image
-          command: |
-            docker build \
-              -f nginx/Dockerfile \
-              -t ${DOCKERHUB_USERNAME}/wedding-nginx:${CIRCLE_SHA1} \
-              -t ${DOCKERHUB_USERNAME}/wedding-nginx:latest \
-              nginx/
-      - run:
-          name: Push nginx image to Docker Hub
-          command: |
-            docker push ${DOCKERHUB_USERNAME}/wedding-nginx:${CIRCLE_SHA1}
-            docker push ${DOCKERHUB_USERNAME}/wedding-nginx:latest
-
 # Workflows
 workflows:
   version: 2
@@ -196,13 +175,6 @@ workflows:
               only: main
 
       - build-and-push-frontend:
-          requires:
-            - lint-frontend
-          filters:
-            branches:
-              only: main
-
-      - build-and-push-nginx:
           requires:
             - lint-frontend
           filters:

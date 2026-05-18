@@ -9,7 +9,7 @@ A modern, multi-tenant digital wedding invitation platform with personalized gue
 - **Database**: PostgreSQL 16
 - **Auth**: JWT + bcrypt
 - **Storage**: Local On-Premise Storage (for images/audio)
-- **Deployment**: Docker + Docker Compose + Nginx
+- **Deployment**: Docker + Docker Compose
 
 ---
 
@@ -82,8 +82,6 @@ docker compose down
 
 ## Production Deployment
 
-Production uses Nginx as a reverse proxy to serve static files and route API requests.
-
 ### 1. Configure Production Environment
 
 ```bash
@@ -108,16 +106,17 @@ docker compose -f docker-compose.prod.yml up --build -d
 
 | Service | URL |
 |---------|-----|
-| Website | http://localhost (port 80) |
-| API | http://localhost/api/* |
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:3000/api/* |
 
 ### Production Architecture
 
 ```
-:80 → Nginx
-      ├── /*      → Static files (built Vite app)
-      └── /api/*  → Backend container :3000
+Frontend container (:3000 via serve) → exposed on host :5173
+Backend container  (:3000)           → exposed on host :3000
 ```
+
+> **Note**: Configure your own reverse proxy (e.g. Nginx) separately to handle SSL termination, domain routing, and static file caching.
 
 ### View Logs
 
@@ -137,33 +136,13 @@ docker compose -f docker-compose.prod.yml down
 
 ---
 
-## Cloudflare R2 Setup
-
-1. Create a bucket named `wedding-uploads` in [Cloudflare R2](https://dash.cloudflare.com/)
-2. Create an API token with R2 read/write permissions
-3. Add credentials to your `.env` file
-
-### Optional: Direct R2 Access (CDN)
-
-For faster file loading, enable public access on your R2 bucket:
-
-1. In Cloudflare dashboard, enable public access for your bucket
-2. Add a custom domain or use the R2.dev subdomain
-3. Set in `.env`:
-   ```env
-   R2_PUBLIC_URL=https://your-bucket.your-domain.com
-   ```
-
----
-
 ## Project Structure
 
 ```
 /invitation
 ├── docker-compose.yml         # Development setup
 ├── docker-compose.prod.yml    # Production setup
-├── nginx/
-│   └── nginx.conf             # Nginx reverse proxy config
+├── docker-compose.deploy.yml  # On-premises deploy (pre-built images)
 ├── backend/
 │   ├── src/
 │   │   ├── db/                # Database schema & migrations
@@ -212,7 +191,7 @@ For faster file loading, enable public access on your R2 bucket:
 ### File Uploads
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/uploads/presigned-url` | Get upload URL (auth required) |
+| POST | `/api/uploads` | Upload a file (auth required) |
 | GET | `/api/uploads/file/*` | Serve uploaded files |
 | DELETE | `/api/uploads/file/*` | Delete uploaded file (auth required) |
 
@@ -238,14 +217,12 @@ docker compose logs backend
 docker compose exec backend npm run db:migrate
 ```
 
-### R2 Upload Errors
-- Verify R2 credentials in `.env`
-- Check bucket name and permissions
-- View backend logs: `docker compose logs backend`
+### Upload Errors
+- Check backend logs: `docker compose logs backend`
+- Verify uploads volume is mounted: `docker compose exec backend ls -la /app/uploads`
 
 ---
 
 ## License
 
 MIT
-

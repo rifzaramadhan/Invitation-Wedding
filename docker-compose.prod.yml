@@ -28,6 +28,8 @@ services:
       PORT: 3000
       NODE_ENV: production
       TZ: ${TZ:-Asia/Jakarta}
+    ports:
+      - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,36 +44,14 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.prod
     container_name: wedding_frontend_prod
-    volumes:
-      # Share built static files with nginx
-      - frontend_dist:/usr/share/nginx/html
-    restart: unless-stopped
-    networks:
-      - wedding_network
-
-  nginx:
-    image: nginx:alpine
-    container_name: wedding_nginx_prod
     ports:
-      - "80:80"
-      # Uncomment below for HTTPS (requires SSL certificates)
-      # - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - frontend_dist:/usr/share/nginx/html:ro
-      - uploads_data:/var/www/uploads:ro
-      # Uncomment for SSL certificates
-      # - ./nginx/ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - backend
-      - frontend
+      - "5173:3000"
     restart: unless-stopped
     networks:
       - wedding_network
 
 volumes:
   postgres_data:
-  frontend_dist:
   uploads_data:
 
 networks:

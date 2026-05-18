@@ -73,8 +73,7 @@ uploadsRouter.post('/', authMiddleware, async (c) => {
 
 /**
  * GET /api/uploads/file/*
- * Fallback endpoint for serving files from local storage (for development)
- * In production, Nginx should serve this directory directly for performance.
+ * Serve files from local storage
  */
 uploadsRouter.get('/file/*', async (c) => {
     try {
