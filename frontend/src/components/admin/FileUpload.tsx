@@ -44,15 +44,8 @@ export default function FileUpload({
         setIsUploading(true);
 
         try {
-            // Get presigned URL from backend
-            const { data } = await uploadsApi.getPresignedUrl(
-                file.name,
-                file.type,
-                type
-            );
-
-            // Upload directly to R2
-            await uploadsApi.uploadToR2(data.uploadUrl, file, (percent) => {
+            // Upload directly to backend local storage
+            const { data } = await uploadsApi.uploadFile(file, type, (percent) => {
                 setProgress(percent);
             });
 

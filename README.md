@@ -8,7 +8,7 @@ A modern, multi-tenant digital wedding invitation platform with personalized gue
 - **Backend**: Hono + TypeScript + Drizzle ORM
 - **Database**: PostgreSQL 16
 - **Auth**: JWT + bcrypt
-- **Storage**: Cloudflare R2 (for images/audio)
+- **Storage**: Local On-Premise Storage (for images/audio)
 - **Deployment**: Docker + Docker Compose + Nginx
 
 ---
@@ -18,7 +18,7 @@ A modern, multi-tenant digital wedding invitation platform with personalized gue
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) & [Docker Compose](https://docs.docker.com/compose/install/)
-- [Cloudflare R2 Account](https://developers.cloudflare.com/r2/) (for file uploads)
+
 
 ### 1. Clone the Repository
 
@@ -44,11 +44,7 @@ POSTGRES_DB=wedding_invitation
 # Authentication
 JWT_SECRET=your_jwt_secret_min_32_characters
 
-# Cloudflare R2 Storage
-R2_ACCOUNT_ID=your_cloudflare_account_id
-R2_ACCESS_KEY_ID=your_r2_access_key
-R2_SECRET_ACCESS_KEY=your_r2_secret_key
-R2_BUCKET_NAME=wedding-uploads
+
 ```
 
 > **Tip**: Generate a secure JWT secret with: `openssl rand -base64 32`
@@ -173,7 +169,7 @@ For faster file loading, enable public access on your R2 bucket:
 │   │   ├── db/                # Database schema & migrations
 │   │   ├── routes/            # API routes
 │   │   ├── middleware/        # Auth middleware
-│   │   └── utils/             # Utilities (R2, JWT)
+│   │   └── utils/             # Utilities (Storage, JWT)
 │   ├── Dockerfile             # Development
 │   └── Dockerfile.prod        # Production
 └── frontend/

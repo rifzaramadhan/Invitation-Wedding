@@ -86,38 +86,27 @@ export const publicApi = {
     submitWish: (slug: string, data: WishInput) => api.post(`/public/${slug}/wishes`, data),
 };
 
-// Uploads API (file uploads to R2)
+// Uploads API (local file uploads)
 export const uploadsApi = {
-    getPresignedUrl: (filename: string, contentType: string, type: 'image' | 'audio') =>
-        api.post<{
-            uploadUrl: string;
+    uploadFile: async (file: File, type: 'image' | 'audio', onProgress?: (percent: number) => void) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', type);
+
+        return api.post<{
             key: string;
             publicUrl: string;
             maxSize: number;
-        }>('/uploads/presigned-url', { filename, contentType, type }),
-    uploadToR2: async (url: string, file: File, onProgress?: (percent: number) => void) => {
-        return new Promise<void>((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open('PUT', url);
-            xhr.setRequestHeader('Content-Type', file.type);
-
-            xhr.upload.onprogress = (event) => {
-                if (event.lengthComputable && onProgress) {
-                    const percent = Math.round((event.loaded / event.total) * 100);
+        }>('/uploads', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+            onUploadProgress: (progressEvent) => {
+                if (progressEvent.total && onProgress) {
+                    const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                     onProgress(percent);
                 }
-            };
-
-            xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    resolve();
-                } else {
-                    reject(new Error(`Upload failed with status ${xhr.status}`));
-                }
-            };
-
-            xhr.onerror = () => reject(new Error('Upload failed'));
-            xhr.send(file);
+            },
         });
     },
     deleteFile: (key: string) => api.delete(`/uploads/file/${encodeURIComponent(key)}`),

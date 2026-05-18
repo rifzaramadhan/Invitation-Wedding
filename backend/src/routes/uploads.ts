@@ -1,165 +1,159 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { randomUUID } from 'crypto';
+import fs from 'fs';
 import { authMiddleware } from '../middleware/auth.js';
 import {
-    isR2Configured,
-    getPresignedUploadUrl,
-    getFilePublicUrl,
-    getObject,
-    deleteObject,
     validateContentType,
     getMaxFileSize,
     ALLOWED_IMAGE_TYPES,
     ALLOWED_AUDIO_TYPES,
-} from '../utils/r2.js';
+    saveFileLocal,
+    getLocalFilePath,
+    deleteLocalFile
+} from '../utils/local-storage.js';
 
 const uploadsRouter = new Hono();
 
-// Validation schema for presigned URL request
-const presignedUrlSchema = z.object({
-    filename: z.string().min(1).max(255),
-    contentType: z.string().min(1),
-    type: z.enum(['image', 'audio']),
-});
-
 /**
- * POST /api/uploads/presigned-url
- * Generate a presigned URL for uploading a file directly to R2
+ * POST /api/uploads/
+ * Upload a file directly to local storage
  */
-uploadsRouter.post('/presigned-url', authMiddleware, async (c) => {
+uploadsRouter.post('/', authMiddleware, async (c) => {
     try {
-        // Check if R2 is configured
-        if (!isR2Configured()) {
-            return c.json(
-                { error: 'File uploads are not configured. Please contact support.' },
-                503
-            );
-        }
-
         const { userId } = c.get('user');
-        const body = await c.req.json();
-        const data = presignedUrlSchema.parse(body);
+        
+        // Parse multipart/form-data
+        const body = await c.req.parseBody();
+        const file = body['file'];
+        const typeStr = body['type'] as string;
+        
+        if (!file || !(file instanceof File)) {
+            return c.json({ error: 'File is required' }, 400);
+        }
+        
+        if (typeStr !== 'image' && typeStr !== 'audio') {
+            return c.json({ error: 'Invalid type, must be image or audio' }, 400);
+        }
+        
+        const type = typeStr as 'image' | 'audio';
+        const contentType = file.type;
+        const filename = file.name;
 
         // Validate content type
-        if (!validateContentType(data.contentType, data.type)) {
-            const allowedTypes = data.type === 'image' ? ALLOWED_IMAGE_TYPES : ALLOWED_AUDIO_TYPES;
+        if (!validateContentType(contentType, type)) {
+            const allowedTypes = type === 'image' ? ALLOWED_IMAGE_TYPES : ALLOWED_AUDIO_TYPES;
             return c.json(
                 {
-                    error: `Invalid content type. Allowed types for ${data.type}: ${allowedTypes.join(', ')}`,
+                    error: `Invalid content type. Allowed types for ${type}: ${allowedTypes.join(', ')}`,
                 },
                 400
             );
         }
 
-        // Generate a unique key for the file
-        const uuid = randomUUID();
-        const sanitizedFilename = data.filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const key = `weddings/${userId}/${data.type}/${uuid}-${sanitizedFilename}`;
+        // Validate file size
+        const maxSize = getMaxFileSize(type);
+        if (file.size > maxSize) {
+            return c.json({ error: `File too large. Maximum size is ${maxSize / (1024 * 1024)}MB.` }, 400);
+        }
 
-        // Get max file size for this type (for client-side validation info)
-        const maxSize = getMaxFileSize(data.type);
-
-        // Generate presigned upload URL
-        const uploadUrl = await getPresignedUploadUrl(key, data.contentType);
-
-        // Get the public URL for this file (will be proxied through our server)
-        const publicUrl = getFilePublicUrl(key);
+        // Read file buffer and save locally
+        const arrayBuffer = await file.arrayBuffer();
+        const { key, publicUrl } = await saveFileLocal(userId, type, filename, arrayBuffer);
 
         return c.json({
-            uploadUrl,
             key,
             publicUrl,
             maxSize,
         });
     } catch (err) {
-        if (err instanceof z.ZodError) {
-            return c.json({ error: 'Validation error', details: err.errors }, 400);
-        }
-        console.error('Presigned URL generation error:', err);
-        return c.json({ error: 'Failed to generate upload URL' }, 500);
+        console.error('File upload error:', err);
+        return c.json({ error: 'Failed to upload file' }, 500);
     }
 });
 
 /**
  * GET /api/uploads/file/*
- * Proxy endpoint for serving files from R2
- * This allows us to serve files without exposing R2 credentials
+ * Fallback endpoint for serving files from local storage (for development)
+ * In production, Nginx should serve this directory directly for performance.
  */
 uploadsRouter.get('/file/*', async (c) => {
     try {
         // Get the full path after /file/
         const key = c.req.path.replace('/api/uploads/file/', '');
 
-        // Security: validate key format
-        if (!key.startsWith('weddings/')) {
+        // Security: validate key format (prevent directory traversal)
+        if (!key.startsWith('weddings/') || key.includes('..')) {
             return c.json({ error: 'Invalid file key' }, 400);
         }
 
-        if (!isR2Configured()) {
-            return c.json({ error: 'File storage not configured' }, 503);
-        }
+        const filePath = getLocalFilePath(key);
 
-        const response = await getObject(key);
-
-        if (!response.Body) {
+        if (!fs.existsSync(filePath)) {
             return c.json({ error: 'File not found' }, 404);
         }
-
-        // Get content type from response
-        const contentType = response.ContentType || 'application/octet-stream';
-        const contentLength = response.ContentLength;
-
-        // Set response headers
+        
+        const stat = fs.statSync(filePath);
+        const fileSize = stat.size;
+        
+        // Very basic content type mapping
+        let contentType = 'application/octet-stream';
+        if (key.endsWith('.jpg') || key.endsWith('.jpeg')) contentType = 'image/jpeg';
+        else if (key.endsWith('.png')) contentType = 'image/png';
+        else if (key.endsWith('.webp')) contentType = 'image/webp';
+        else if (key.endsWith('.gif')) contentType = 'image/gif';
+        else if (key.endsWith('.mp3')) contentType = 'audio/mpeg';
+        else if (key.endsWith('.wav')) contentType = 'audio/wav';
+        
         c.header('Content-Type', contentType);
-        if (contentLength) {
-            c.header('Content-Length', contentLength.toString());
-        }
+        c.header('Content-Length', fileSize.toString());
         c.header('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
         c.header('Accept-Ranges', 'bytes');
 
         // Handle range requests for audio streaming
         const rangeHeader = c.req.header('Range');
-        if (rangeHeader && contentLength) {
+        if (rangeHeader) {
             const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
             if (match) {
                 const start = parseInt(match[1], 10);
-                const end = match[2] ? parseInt(match[2], 10) : contentLength - 1;
+                const end = match[2] ? parseInt(match[2], 10) : fileSize - 1;
 
                 c.status(206);
-                c.header('Content-Range', `bytes ${start}-${end}/${contentLength}`);
+                c.header('Content-Range', `bytes ${start}-${end}/${fileSize}`);
                 c.header('Content-Length', (end - start + 1).toString());
+                
+                // Hono supports Web Streams natively, but passing a Node readable stream directly
+                // works well in Node.js environments.
+                const stream = fs.createReadStream(filePath, { start, end });
+                // We convert Node stream to web stream or let Hono handle it depending on the adapter.
+                // In hono/node-server it handles Node streams if returned. But to be safe, return readable stream.
+                // For simplicity, since it's a fallback, let's just use Node stream and Hono's stream helper if needed.
+                // We can use Response directly or just c.body()
+                
+                // Actually, passing fs stream to c.body works in Hono node-server.
+                return c.body(stream as any);
             }
         }
 
-        // Transform the stream to a web ReadableStream
-        const bodyStream = response.Body.transformToWebStream();
-        return new Response(bodyStream, {
-            status: c.res.status,
-            headers: c.res.headers,
-        });
+        // Return full file
+        const stream = fs.createReadStream(filePath);
+        return c.body(stream as any);
     } catch (err: unknown) {
-        console.error('File proxy error:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        if (errorMessage.includes('NoSuchKey') || errorMessage.includes('not found')) {
-            return c.json({ error: 'File not found' }, 404);
-        }
+        console.error('File serve error:', err);
         return c.json({ error: 'Failed to retrieve file' }, 500);
     }
 });
 
 /**
  * DELETE /api/uploads/file/*
- * Delete a file from R2 (only the owner can delete)
+ * Delete a file from local storage (only the owner can delete)
  */
 uploadsRouter.delete('/file/*', authMiddleware, async (c) => {
     try {
         const { userId } = c.get('user');
-        // Get the full path after /file/
         const key = c.req.path.replace('/api/uploads/file/', '');
 
-        // Security: validate key format and ownership
-        if (!key.startsWith('weddings/')) {
+        // Security: validate key format and ownership, prevent directory traversal
+        if (!key.startsWith('weddings/') || key.includes('..')) {
             return c.json({ error: 'Invalid file key' }, 400);
         }
 
@@ -169,11 +163,7 @@ uploadsRouter.delete('/file/*', authMiddleware, async (c) => {
             return c.json({ error: 'Unauthorized to delete this file' }, 403);
         }
 
-        if (!isR2Configured()) {
-            return c.json({ error: 'File storage not configured' }, 503);
-        }
-
-        await deleteObject(key);
+        await deleteLocalFile(key);
 
         return c.json({ message: 'File deleted successfully' });
     } catch (err) {
