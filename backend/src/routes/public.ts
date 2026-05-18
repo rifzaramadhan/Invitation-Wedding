@@ -43,6 +43,15 @@ publicRouter.get('/:slug', async (c) => {
                     description: true,
                 },
             },
+            gallery: {
+                orderBy: (gallery, { asc }) => [asc(gallery.order)],
+                columns: {
+                    id: true,
+                    url: true,
+                    alt: true,
+                    order: true,
+                },
+            },
         },
     });
 
@@ -89,6 +98,15 @@ publicRouter.get('/:slug/guest/:guestSlug', async (c) => {
                     startTime: true,
                     endTime: true,
                     description: true,
+                },
+            },
+            gallery: {
+                orderBy: (gallery, { asc }) => [asc(gallery.order)],
+                columns: {
+                    id: true,
+                    url: true,
+                    alt: true,
+                    order: true,
                 },
             },
         },

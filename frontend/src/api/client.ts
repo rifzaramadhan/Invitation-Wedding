@@ -47,6 +47,9 @@ export const weddingsApi = {
     update: (id: string, data: Partial<WeddingInput>) => api.put(`/weddings/${id}`, data),
     delete: (id: string) => api.delete(`/weddings/${id}`),
     stats: (id: string) => api.get(`/weddings/${id}/stats`),
+    addGalleryPhoto: (id: string, data: { url: string; alt?: string; order?: number }) =>
+        api.post(`/weddings/${id}/gallery`, data),
+    deleteGalleryPhoto: (id: string) => api.delete(`/weddings/gallery/${id}`),
 };
 
 // Guests API
@@ -208,6 +211,15 @@ export interface Wedding {
     createdAt: string;
     events?: Event[];
     guests?: Guest[];
+    gallery?: GalleryImage[];
+}
+
+export interface GalleryImage {
+    id: string;
+    url: string;
+    alt?: string;
+    order: number;
+    createdAt: string;
 }
 
 export interface Guest {

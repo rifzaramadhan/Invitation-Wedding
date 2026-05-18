@@ -114,9 +114,9 @@ export async function getPresignedDownloadUrl(key: string): Promise<string> {
 export function getFilePublicUrl(key: string): string {
     const config = getConfig();
     // If a public URL is configured (custom domain), use it
-    if (config.publicUrl) {
-        return `${config.publicUrl}/${key}`;
-    }
+    // if (config.publicUrl) {
+    //     return `${config.publicUrl}/${key}`;
+    // }
     // Otherwise, use our proxy endpoint with the key as path segments
     return `/api/uploads/file/${key}`;
 }

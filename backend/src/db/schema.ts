@@ -86,15 +86,7 @@ export const usersRelations = relations(users, ({ many }) => ({
     weddings: many(weddings),
 }));
 
-export const weddingsRelations = relations(weddings, ({ one, many }) => ({
-    user: one(users, {
-        fields: [weddings.userId],
-        references: [users.id],
-    }),
-    events: many(events),
-    guests: many(guests),
-    wishes: many(wishes),
-}));
+
 
 export const eventsRelations = relations(events, ({ one }) => ({
     wedding: one(weddings, {
@@ -120,4 +112,33 @@ export const wishesRelations = relations(wishes, ({ one }) => ({
         fields: [wishes.guestId],
         references: [guests.id],
     }),
+}));
+
+// Gallery table - additional photos for the wedding
+export const weddingGallery = pgTable('wedding_gallery', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    weddingId: uuid('wedding_id').notNull().references(() => weddings.id, { onDelete: 'cascade' }),
+    url: text('url').notNull(),
+    alt: text('alt'),
+    order: integer('order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const weddingGalleryRelations = relations(weddingGallery, ({ one }) => ({
+    wedding: one(weddings, {
+        fields: [weddingGallery.weddingId],
+        references: [weddings.id],
+    }),
+}));
+
+// Update wedding relations to include gallery
+export const weddingsRelations = relations(weddings, ({ one, many }) => ({
+    user: one(users, {
+        fields: [weddings.userId],
+        references: [users.id],
+    }),
+    events: many(events),
+    guests: many(guests),
+    wishes: many(wishes),
+    gallery: many(weddingGallery),
 }));

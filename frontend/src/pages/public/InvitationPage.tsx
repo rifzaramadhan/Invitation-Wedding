@@ -8,7 +8,10 @@ import { ThemeProvider } from '../../components/ThemeProvider';
 import OpeningCover from '../../components/public/OpeningCover';
 import Hero from '../../components/public/Hero';
 import CoupleSection from '../../components/public/CoupleSection';
+import GallerySection from '../../components/public/GallerySection';
 import EventTimeline from '../../components/public/EventTimeline';
+
+
 import WishesSection from '../../components/public/WishesSection';
 import GiftSection from '../../components/public/GiftSection';
 import Footer from '../../components/public/Footer';
@@ -111,6 +114,29 @@ export default function InvitationPage() {
                             <Hero wedding={wedding} guestName={guest?.name} />
                             <CoupleSection wedding={wedding} />
                             <EventTimeline events={wedding.events || []} />
+                            <GallerySection
+                                images={
+                                    wedding.gallery && wedding.gallery.length > 0
+                                        ? wedding.gallery.map(img => ({
+                                            url: img.url,
+                                            alt: img.alt || 'Wedding Moment',
+                                        }))
+                                        : [
+                                            {
+                                                url: wedding.coverImage || 'https://images.unsplash.com/photo-1519225469958-305fdb71a909?q=80&w=2070',
+                                                alt: 'Our Beautiful Moment'
+                                            },
+                                            {
+                                                url: wedding.groomPhoto || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1000',
+                                                alt: wedding.groomName
+                                            },
+                                            {
+                                                url: wedding.bridePhoto || 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=1000',
+                                                alt: wedding.brideName
+                                            }
+                                        ]
+                                }
+                            />
                             <WishesSection
                                 slug={slug!}
                                 wishes={wishesData || []}

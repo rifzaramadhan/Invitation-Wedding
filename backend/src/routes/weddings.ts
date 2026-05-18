@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../db/index.js';
-import { weddings, events, guests, wishes } from '../db/schema.js';
+import { weddings, events, guests, wishes, weddingGallery } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth.js';
 
@@ -69,6 +69,7 @@ weddingsRouter.get('/:id', async (c) => {
         with: {
             events: { orderBy: (events, { asc }) => [asc(events.order)] },
             guests: { orderBy: (guests, { desc }) => [desc(guests.createdAt)] },
+            gallery: { orderBy: (gallery, { asc }) => [asc(gallery.order)] },
         },
     });
 
@@ -201,6 +202,63 @@ weddingsRouter.get('/:id/stats', async (c) => {
     };
 
     return c.json({ stats });
+});
+
+// Add photo to gallery
+weddingsRouter.post('/:id/gallery', async (c) => {
+    try {
+        const { userId } = c.get('user');
+        const { id } = c.req.param();
+        const body = await c.req.json();
+        const schema = z.object({
+            url: urlOrPath,
+            alt: z.string().optional(),
+            order: z.number().optional(),
+        });
+        const data = schema.parse(body);
+
+        const wedding = await db.query.weddings.findFirst({
+            where: and(eq(weddings.id, id), eq(weddings.userId, userId)),
+        });
+
+        if (!wedding) {
+            return c.json({ error: 'Wedding not found' }, 404);
+        }
+
+        const [photo] = await db.insert(weddingGallery).values({
+            weddingId: id,
+            url: data.url,
+            alt: data.alt,
+            order: data.order,
+        }).returning();
+
+        return c.json({ photo }, 201);
+    } catch (err) {
+        if (err instanceof z.ZodError) {
+            return c.json({ error: 'Validation error', details: err.errors }, 400);
+        }
+        console.error('Add gallery photo error:', err);
+        return c.json({ error: 'Internal server error' }, 500);
+    }
+});
+
+// Delete photo from gallery
+weddingsRouter.delete('/gallery/:id', async (c) => {
+    const { userId } = c.get('user');
+    const { id } = c.req.param();
+
+    const photo = await db.query.weddingGallery.findFirst({
+        where: eq(weddingGallery.id, id),
+        with: { wedding: true },
+    });
+
+    if (!photo || photo.wedding.userId !== userId) {
+        return c.json({ error: 'Photo not found' }, 404);
+    }
+
+    await db.delete(weddingGallery).where(eq(weddingGallery.id, id));
+
+    return c.json({ message: 'Photo deleted' });
 });
 
 export default weddingsRouter;

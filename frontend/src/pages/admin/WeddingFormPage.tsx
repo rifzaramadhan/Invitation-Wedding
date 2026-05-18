@@ -6,14 +6,14 @@ import { ArrowLeft, Save, Trash2, Plus, X, Palette, CheckCircle, AlertCircle } f
 import { weddingsApi, eventsApi, Wedding, WeddingInput, EventInput } from '../../api/client';
 import { getThemeList } from '../../themes/themes';
 import FileUpload from '../../components/admin/FileUpload';
+import GalleryUploadSection from '../../components/admin/GalleryUploadSection';
 
 export default function WeddingFormPage() {
     const { id } = useParams<{ id: string }>();
+    const isEditing = !!id;
     const navigate = useNavigate();
     const queryClient = useQueryClient();
-    const isEditing = !!id;
-
-    const [activeTab, setActiveTab] = useState<'details' | 'events' | 'gift'>('details');
+    const [activeTab, setActiveTab] = useState<'details' | 'events' | 'gift' | 'gallery'>('details');
     const [formData, setFormData] = useState<WeddingInput>({
         slug: '',
         groomName: '',
@@ -279,7 +279,7 @@ export default function WeddingFormPage() {
             <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Tabs */}
                 <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-                    {(['details', 'events', 'gift'] as const).map((tab) => (
+                    {(['details', 'events', 'gift', 'gallery'] as const).map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -291,6 +291,7 @@ export default function WeddingFormPage() {
                             {tab === 'details' && 'Wedding Details'}
                             {tab === 'events' && 'Events'}
                             {tab === 'gift' && 'Gift Settings'}
+                            {tab === 'gallery' && 'Gallery'}
                         </button>
                     ))}
                 </div>
@@ -777,6 +778,16 @@ export default function WeddingFormPage() {
                                 ))}
                             </div>
                         </motion.div>
+                    )}
+
+
+                    {/* Gallery Tab */}
+                    {activeTab === 'gallery' && weddingData && (
+                        <GalleryUploadSection
+                            weddingId={weddingData.id}
+                            images={weddingData.gallery || []}
+                            onUpdate={() => queryClient.invalidateQueries({ queryKey: ['wedding', id] })}
+                        />
                     )}
                 </form>
             </main>
