@@ -22,6 +22,7 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
+COPY drizzle.config.ts ./
 
 # Install production dependencies only
 RUN npm ci --omit=dev
