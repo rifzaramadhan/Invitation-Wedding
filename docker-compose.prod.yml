@@ -1,38 +1,20 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: wedding_postgres_prod
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - wedding_network
-
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
     container_name: wedding_backend_prod
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
       PORT: 3000
       NODE_ENV: production
       TZ: ${TZ:-Asia/Jakarta}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "3000:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     volumes:
       - uploads_data:/app/uploads
     restart: unless-stopped
@@ -51,7 +33,6 @@ services:
       - wedding_network
 
 volumes:
-  postgres_data:
   uploads_data:
 
 networks:

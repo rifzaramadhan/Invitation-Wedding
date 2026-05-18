@@ -36,16 +36,18 @@ cp .env.example .env
 Edit `.env` with your settings:
 
 ```env
-# Database
+# External PostgreSQL
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
 POSTGRES_USER=wedding
 POSTGRES_PASSWORD=your_secure_password
 POSTGRES_DB=wedding_invitation
 
 # Authentication
 JWT_SECRET=your_jwt_secret_min_32_characters
-
-
 ```
+
+> When running the backend in Docker, set `POSTGRES_HOST` to your database host (e.g. `host.docker.internal` if PostgreSQL runs on the same machine as Docker).
 
 > **Tip**: Generate a secure JWT secret with: `openssl rand -base64 32`
 
@@ -70,7 +72,7 @@ Access the applications:
 ### Development Features
 - Hot reload enabled for both frontend and backend
 - Source files mounted as volumes
-- PostgreSQL data persisted in Docker volume
+- Connects to an external PostgreSQL instance configured in `.env`
 
 ### Stop Services
 
@@ -91,8 +93,13 @@ cp .env.production.example .env
 Update `.env` with **secure production values**:
 
 ```env
-# Use strong passwords in production!
+# External PostgreSQL
+POSTGRES_HOST=your-postgres-host
+POSTGRES_PORT=5432
+POSTGRES_USER=wedding
 POSTGRES_PASSWORD=super_secure_password_here
+POSTGRES_DB=wedding_invitation
+
 JWT_SECRET=production_jwt_secret_at_least_32_chars
 ```
 
@@ -200,13 +207,9 @@ docker compose -f docker-compose.prod.yml down
 ## Troubleshooting
 
 ### Database Connection Failed
-```bash
-# Check if postgres is running
-docker compose ps
-
-# View postgres logs
-docker compose logs postgres
-```
+- Verify `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` in `.env`
+- From Docker, ensure the host is reachable (use `host.docker.internal` for a database on the Docker host)
+- Test connectivity: `docker compose exec backend npm run db:migrate`
 
 ### Backend Not Starting
 ```bash
